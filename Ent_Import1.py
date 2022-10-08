@@ -6,9 +6,9 @@ import bpy
 C = bpy.context
 coll_scene = C.scene.collection
 path = 'F:\\CPmod\\coyote\\source\\raw'
-ent_names = ['vending_machine_1.ent','vending_machine_1.ent']
+ent_names = ['vending_machine_1.ent','vending_machine_1.ent','vending_machine_1.ent']
 # The list below needs to be the appearanceNames for each ent that you want to import
-appearences =['a_burrito','c_nicola']
+appearences =['a_burrito','c_nicola','o_chromanticore']
  
 jsonpath = glob.glob(path+"\**\*.ent.json", recursive = True)
 if len(jsonpath)==0:
@@ -20,7 +20,9 @@ if len(meshnames)==0:
     print('No Meshes found')
 if len(meshnames)>0 and len(jsonpath)>0:
     for x,ent_name in enumerate(ent_names):
-        ent_coll=bpy.data.collections.new(ent_name)
+        ent_coll=bpy.data.collections.new(ent_name+'_'+appearences[x])
+        ent_coll['appearanceName']=appearences[x]
+        ent_coll['depotPath']=ent_name
         coll_scene.children.link(ent_coll)
         for i,e in enumerate(jsonpath):
              if os.path.basename(e)== ent_name+'.json' :
@@ -74,6 +76,7 @@ if len(meshnames)>0 and len(jsonpath)>0:
                                    obj.scale.y = c['localTransform']['scale']['Y'] 
                                    obj.scale.z = c['localTransform']['scale']['Z'] 
                            move_coll= coll_scene.children.get( objs[0].users_collection[0].name )
+                           move_coll['depotPath']=c['mesh']['DepotPath']
                            ent_coll.children.link(move_coll) 
                            coll_scene.children.unlink(move_coll)
                         except:
