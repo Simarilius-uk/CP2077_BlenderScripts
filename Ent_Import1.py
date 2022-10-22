@@ -36,7 +36,7 @@ if len(meshnames)>0 and len(jsonpath)>0:
             app_idx=0
             for i,a in enumerate(apps):
                 if a['appearanceName']==appearences[x]:
-                    app_idx=x
+                    app_idx=i
             app_file = apps[app_idx]['appearanceResource']['DepotPath']
             app_path = glob.glob(path+"\**\*.app.json", recursive = True)
             for i,e in enumerate(app_path):
