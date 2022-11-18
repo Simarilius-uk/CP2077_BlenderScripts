@@ -28,12 +28,17 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     if iteration == total: 
         print()
 
-path = 'F:\\CPmod\\Vs_apartmen\\source\\raw\\base'
+path = 'F:\\CPmod\\arch\\source\\raw\\base'
 
 C = bpy.context
 coll_scene = C.scene.collection
-Masters=bpy.data.collections.new("MasterInstances")
-coll_scene.children.link(Masters)
+if "MasterInstances" not in coll_scene.children.keys():
+    Masters=bpy.data.collections.new("MasterInstances")
+    coll_scene.children.link(Masters)
+else:
+    Masters=bpy.data.collections.get("MasterInstances")
+
+
 
 # Set target collection to a known collection 
 coll_target = coll_scene.children.get("MasterInstances")
@@ -45,32 +50,36 @@ print(total)
 i=0
 printProgressBar(i, total, prefix = 'Progress:', suffix = 'Complete', length = 50)
 for mesh in meshes:
-    try:
-       bpy.ops.io_scene_gltf.cp77(filepath=mesh)
-       objs = C.selected_objects
-       
-       
-       move_coll= coll_scene.children.get( objs[0].users_collection[0].name )
-       coll_target.children.link(move_coll) 
-       coll_scene.children.unlink(move_coll)
-       # If target found and object list not empty
-       #if coll_target and objs:
-           # Loop through all objects
-        #   print('moving')
-         #  for ob in objs:
-          #     active_coll = C.view_layer.active_layer_collection.collection
-               
-               
-               
-               
-               # Loop through all collections the obj is linked to
-               #for coll in ob.users_collection:
-                #   # Unlink the object
-                 #  coll.objects.unlink(ob)
-               # Link each object to the target collection
-               #coll_target.objects.link(ob)      
-    except:
-        print("Failed on ",mesh)
+    if os.path.basename(mesh)[:-4] not in Masters.children.keys():
+        try:
+           bpy.ops.io_scene_gltf.cp77(filepath=mesh)
+           objs = C.selected_objects
+           
+           
+           move_coll= coll_scene.children.get( objs[0].users_collection[0].name )
+           coll_target.children.link(move_coll) 
+           coll_scene.children.unlink(move_coll)
+           # If target found and object list not empty
+           #if coll_target and objs:
+               # Loop through all objects
+            #   print('moving')
+             #  for ob in objs:
+              #     active_coll = C.view_layer.active_layer_collection.collection
+                   
+                   
+                   
+                   
+                   # Loop through all collections the obj is linked to
+                   #for coll in ob.users_collection:
+                    #   # Unlink the object
+                     #  coll.objects.unlink(ob)
+                   # Link each object to the target collection
+                   #coll_target.objects.link(ob)      
+        except:
+            print("Failed on ",mesh)
+    else:
+        print('already imported')
+            
     i=i+1
     printProgressBar(i, total, prefix = 'Progress:', suffix = 'Complete', length = 50)
     
