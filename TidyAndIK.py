@@ -31,8 +31,7 @@ for bone in body.data.bones:
         print('JNT - ',bone.name)
         bone.layers[0]=False
         bone.layers[30]=True
-    else:
-        bone.layers[0]=True
+
 
 
 Pairs=[('LeftShoulder','LeftArm'),('LeftArm','LeftForeArm'),('LeftForeArm','LeftHand'),
