@@ -1,8 +1,3 @@
-# Script to tidy up a CP2077 rig and add IK constraints to the arms and legs
-# Written by Simarilius, Nov 2022
-# Latest at https://github.com/Simarilius-uk/CP2077_BlenderScripts/blob/main/TidyAndIK.py
-# let me know on the CP modding Discord if you have issues.
-
 import bpy
 from mathutils import *; from math import *
 
@@ -17,22 +12,14 @@ circle2=bpy.context.selected_objects[0]
 circle2.hide_set(True)
 circle2.hide_render=True
 
+bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 body = bpy.data.objects['BodyArmature']
-for bone in body.data.bones:
-    if 'JNT' in bone.name:
-        print('JNT - ',bone.name)
-        bone.layers[0]=False
-        bone.layers[31]=True
-    elif 'root'in bone.name or 'Root' in bone.name or 'gravity' in bone.name:
-        print('root - ',bone.name)
-        bone.layers[0]=False
-        bone.layers[15]=True
-    elif 'GRP' in bone.name:
-        print('JNT - ',bone.name)
-        bone.layers[0]=False
-        bone.layers[30]=True
+body.select_set(True)
 
 
+bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+body = bpy.data.objects['BodyArmature']
 
 Pairs=[('LeftShoulder','LeftArm'),('LeftArm','LeftForeArm'),('LeftForeArm','LeftHand'),
 ('RightShoulder','RightArm'),('RightArm','RightForeArm'),('RightForeArm','RightHand'),
@@ -48,16 +35,16 @@ Pairs=[('LeftShoulder','LeftArm'),('LeftArm','LeftForeArm'),('LeftForeArm','Left
 ('RightInHandRing','RightHandRing1'),('RightHandRing1','RightHandRing2'),('RightHandRing2','RightHandRing3'),
 ('RightInHandPinky','RightHandPinky1'),('RightHandPinky1','RightHandPinky2'),('RightHandPinky2','RightHandPinky3')
 ]
-body.select_set(True)
+
 bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 body = bpy.data.objects['BodyArmature']
-body.data.display_type='OCTAHEDRAL'
-body.show_in_front = True
 
 bpy.context.view_layer.objects.active = body
 
 bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 body = bpy.data.objects['BodyArmature']
+body.data.display_type='OCTAHEDRAL'
+body.show_in_front = True
 for (Abone,Abone2) in Pairs:
     bone=body.data.edit_bones[Abone]
     bone2=body.data.edit_bones[Abone2]
@@ -104,7 +91,7 @@ LfLoc=Lfoot.constraints.new('COPY_LOCATION')
 LfLoc.target=body
 LfLoc.subtarget='LeftLeg'
 LfLoc.head_tail=1
-body.pose.bones["HeelIK.L"].custom_shape=circle
+body.pose.bones["HeelIK.L"].custom_shape=circle2
 
 
 bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
@@ -153,7 +140,7 @@ RfLoc=Rfoot.constraints.new('COPY_LOCATION')
 RfLoc.target=body
 RfLoc.subtarget='RightLeg'
 RfLoc.head_tail=1
-body.pose.bones["HeelIK.R"].custom_shape=circle
+body.pose.bones["HeelIK.R"].custom_shape=circle2
 
 bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
@@ -233,6 +220,9 @@ body.data.bones["WristIK.R"].select=True
 bpy.context.object.data.edit_bones.active = body.data.edit_bones["WristIK.R"]
 bpy.ops.armature.parent_set(type='OFFSET')
 bpy.ops.armature.select_all(action='DESELECT')
+
+bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+body = bpy.data.objects['BodyArmature']
 bpy.ops.object.mode_set(mode='POSE', toggle=False)
 
 RArm=body.pose.bones["RightForeArm"]
@@ -253,3 +243,20 @@ body.pose.bones["WristIK.R"].custom_shape=circle
 body.pose.bones["WristIK.R"].custom_shape_transform=RHand
 
 bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+
+body = bpy.data.objects['BodyArmature']
+for bone in body.data.bones:
+    bone.layers[0]=False
+for bone in body.data.bones:
+    if 'JNT' in bone.name:
+        print('JNT - ',bone.name)
+        bone.layers[31]=True
+        bone.layers[0]=False
+    elif 'root'in bone.name or 'Root' in bone.name or 'gravity' in bone.name:
+        print('root - ',bone.name)
+        bone.layers[15]=True
+        bone.layers[0]=False
+    elif 'GRP' in bone.name:
+        print('JNT - ',bone.name)
+        bone.layers[30]=True
+        bone.layers[0]=False
