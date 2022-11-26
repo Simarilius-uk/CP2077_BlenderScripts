@@ -1,3 +1,8 @@
+# Script to tidy up a CP2077 rig and add IK constraints to the arms and legs
+# Written by Simarilius, Nov 2022
+# Latest at https://github.com/Simarilius-uk/CP2077_BlenderScripts/blob/main/TidyAndIK.py
+# let me know on the CP modding Discord if you have issues.
+
 import bpy
 from mathutils import *; from math import *
 
