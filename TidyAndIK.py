@@ -18,6 +18,22 @@ circle2.hide_set(True)
 circle2.hide_render=True
 
 body = bpy.data.objects['BodyArmature']
+for bone in body.data.bones:
+    if 'JNT' in bone.name:
+        print('JNT - ',bone.name)
+        bone.layers[0]=False
+        bone.layers[31]=True
+    elif 'root'in bone.name or 'Root' in bone.name or 'gravity' in bone.name:
+        print('root - ',bone.name)
+        bone.layers[0]=False
+        bone.layers[15]=True
+    elif 'GRP' in bone.name:
+        print('JNT - ',bone.name)
+        bone.layers[0]=False
+        bone.layers[30]=True
+    else:
+        bone.layers[0]=True
+
 
 Pairs=[('LeftShoulder','LeftArm'),('LeftArm','LeftForeArm'),('LeftForeArm','LeftHand'),
 ('RightShoulder','RightArm'),('RightArm','RightForeArm'),('RightForeArm','RightHand'),
@@ -36,6 +52,8 @@ Pairs=[('LeftShoulder','LeftArm'),('LeftArm','LeftForeArm'),('LeftForeArm','Left
 body.select_set(True)
 bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 body = bpy.data.objects['BodyArmature']
+body.data.display_type='OCTAHEDRAL'
+body.show_in_front = True
 
 bpy.context.view_layer.objects.active = body
 
