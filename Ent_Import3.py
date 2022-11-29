@@ -84,7 +84,7 @@ else:
                                meshApp='default'
                                if 'meshAppearance' in c.keys():
                                    meshApp=c['meshAppearance']
-                                   print(meshApp)
+                                   #print(meshApp)
                                dic={}
                                dic['name']=meshApp
                                impapps=(dic,)
@@ -98,23 +98,6 @@ else:
                                
                                for obj in objs:
                                    #print(obj.name, obj.type)
-                                   '''
-                                   if obj.type=='MESH':
-                                       
-                                       # Attempt at picking materials
-                                       materialName='bob'
-                                       print('materialName',materialName,obj.users_collection[0].name)
-                                       materialName = 'ml_'+obj.users_collection[0].name+'_'+meshApp    
-                                       print('B ',materialName, obj.data.materials.keys())
-                                       if materialName in obj.data.materials.keys():
-                                           mat = bpy.data.materials.get(materialName)
-                                           obj.active_material = mat
-                                           print('C')
-                                       elif len(meshApp)>0 and meshApp in obj.data.materials.keys():
-                                           mat = bpy.data.materials.get(meshApp)
-                                           obj.active_material = mat
-                                           print('D')     
-                                       '''
                                    obj.location.x = x
                                    obj.location.y = y                     
                                    obj.location.z = z 
