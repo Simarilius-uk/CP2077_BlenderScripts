@@ -156,8 +156,8 @@ else:
 
 start_time = time.time()
 
-from_mesh_no=101
-to_mesh_no=160
+from_mesh_no=0
+to_mesh_no=1500
 
 for i,m in enumerate(meshes_w_apps):
     if i>=from_mesh_no and i<=to_mesh_no:
