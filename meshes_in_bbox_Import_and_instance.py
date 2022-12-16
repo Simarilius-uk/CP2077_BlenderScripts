@@ -30,7 +30,7 @@ def in_bounds(pos,bounds):
     return True
 
 # Enter the path to your projects source\raw\base folder below, needs double slashes between folder names.
-path = 'F:\\CPmod\\Totentanz\\source\\raw\\base'
+path = 'F:\\CPmod\\Lizzies\\source\\raw\\base'
 
 # Enter 2 sets of user co-ords that define the area of interest (bottom left, top right, defines box orienatated with grid)
 
@@ -119,9 +119,12 @@ basenames=[]
 for m in meshes:
      if m['basename'] not in basenames:
          basenames.append(m['basename'])
+         
+len(basenames)               
 '''
 #uncomment this block to generate the paths to use with the wscript add to project script
-savepath='F:\\CPmod\\script\\basepaths.txt'
+import pprint
+savepath= path[:-15]+'basepaths.txt'
 pp=pprint.pformat(basenames)
 with open(savepath,'w') as out: 
     out.write(pp)
@@ -142,7 +145,7 @@ for m in meshes:
         add_to_list(m , meshes_w_apps)
 
 len(meshes_w_apps)
-path = 'F:\\CPmod\\Totentanz\\source\\raw'
+path = path[:-5]
 import time
 C = bpy.context
 coll_scene = C.scene.collection
@@ -157,17 +160,15 @@ else:
 start_time = time.time()
 
 from_mesh_no=0
-to_mesh_no=1500
+to_mesh_no=10
 
 for i,m in enumerate(meshes_w_apps):
     if i>=from_mesh_no and i<=to_mesh_no:
         #print(m, meshes_w_apps[m]['apps'])
         apps=[]
         for meshApp in meshes_w_apps[m]['apps']:
-            dic={}
-            dic['name']=meshApp
-            apps.append(dic)
-        impapps=tuple(apps)
+            apps.append(meshApp)
+        impapps=','.join(apps)
         print(os.path.join(path, m[:-4]+'glb'),impapps)
         meshpath=os.path.join(path, m[:-4]+'glb')
         try:
