@@ -21,35 +21,14 @@ def get_pos_whole(inst):
         pos[2] = inst['Position']['Z'] 
     return pos
 
-def in_bounds(pos,bounds):
-   # print(pos, 'vs ',bounds)
-    if pos[0]>bounds[3] or pos[0]< bounds[0]:
-        return False
-    if pos[1]>bounds[4] or pos[1]< bounds[1]:
-        return False
-    if pos[2]>bounds[5] or pos[2]< bounds[2]:
-        return False
-    return True
 
 # Enter the path to your projects source\raw\base folder below, needs double slashes between folder names.
 path = 'F:\\CPmod\\Glenn\\source\\raw\\base'
-
-# Enter 2 sets of user co-ords that define the area of interest (bottom left, top right, defines box orienatated with grid)
-
-
-
-PointA = [-20000,-20000,50]
-PointB = [20000,20000,0]
-# grab everything within Zmax+z_tol to Zmin-z_tol
-z_tol = 500
-
-bounds =[min(PointA[0],PointB[0]),min(PointA[1],PointB[1]),min(PointA[2],PointB[2])-z_tol, max(PointA[0],PointB[0]),max(PointA[1],PointB[1]),max(PointA[2],PointB[2])+z_tol]
 
 jsonpath = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
 len(jsonpath)
 
 meshes=[]
-
 
 for filepath in jsonpath:    
     with open(filepath,'r') as f: 
@@ -131,7 +110,7 @@ Masters.hide_viewport=True
 start_time = time.time()
 
 from_mesh_no=0
-to_mesh_no=10000
+to_mesh_no=100000
 
 for i,m in enumerate(meshes_w_apps):
     if i>=from_mesh_no and i<=to_mesh_no:
@@ -462,7 +441,7 @@ for filepath in jsonpath:
                                 else:
                                     print('Mesh not found - ',meshname, ' - ',i, e['HandleId'])
                                   
-            case 'worldInstancedDestructibleMeshNode':
+            case 'xworldInstancedDestructibleMeshNode':
                 #print('worldInstancedDestructibleMeshNode',i)
                 if isinstance(e, dict) and 'mesh' in data.keys():
                     meshname = data['mesh']['DepotPath']
@@ -518,22 +497,29 @@ for filepath in jsonpath:
                                             for old_obj in group.all_objects:                            
                                                 obj=old_obj.copy()  
                                                 new.objects.link(obj)   
-                                         
+                                                                                          
+                                                obj.location.x= deltas[0]
+                                                obj.location.y= deltas[1] 
+                                                obj.location.z= deltas[2] 
+                                                obj.rotation_quaternion =  deltaRs
+                                                
+                                                ob = obj
+                                                mb = ob.matrix_basis
+                                                ob.data.transform(mb)
+                                                for c in ob.children:
+                                                    c.matrix_local = mb @ c.matrix_local
+                                                ob.matrix_basis.identity()
+                                                
                                                 pos=get_pos(inst)
-                                                obj.location.x= pos[0] 
-                                                obj.location.y= pos[1] 
-                                                obj.location.z= pos[2] 
-                                                
-                                                vec= Vector((deltas[0],deltas[1],deltas[2]))
-                                                inv= obj.matrix_world.copy()
-                                                inv.invert()
-                                                vec_rot=vec @ inv
-                                                
-                                                obj.location = obj.location + vec_rot
+                                                new['pos']=pos
+                                                obj.location.x= obj.location.x+pos[0] 
+                                                obj.location.y= obj.location.y+pos[1] 
+                                                obj.location.z= obj.location.z+pos[2] 
+                                        
                                                 
                                                 rot=get_rot(inst)
                                                 rot_q = Quaternion((rot[0],rot[1],rot[2],rot[3]))
-                                                obj.rotation_quaternion =  deltaRs @ rot_q                                                    
+                                                obj.rotation_quaternion = rot_q                                                    
                                                 
                                                 #print(pos,deltas,obj.location)
                                                 if obj.location.x == 0:
