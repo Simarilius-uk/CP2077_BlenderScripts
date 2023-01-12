@@ -32,7 +32,7 @@ def in_bounds(pos,bounds):
     return True
 
 # Enter the path to your projects source\raw\base folder below, needs double slashes between folder names.
-path = 'F:\\CPmod\\lakehouse\\source\\raw\\base'
+path = 'F:\\CPmod\\Glenn\\source\\raw\\base'
 
 # Enter 2 sets of user co-ords that define the area of interest (bottom left, top right, defines box orienatated with grid)
 
@@ -64,56 +64,25 @@ for filepath in jsonpath:
         match type:
             case 'worldEntityNode': 
                 print('worldEntityNode',i)
-                instances = [x for x in t if x['NodeIndex'] == i]
-                for inst in instances:
-                   # print( inst )
-                    pos=get_pos_whole(inst)
-                    if in_bounds(pos, bounds):
-                        meshes.append({'basename':e['Data']['entityTemplate']['DepotPath'],'appearance':e['Data']['appearanceName'],'sector':sectorName})
+                meshes.append({'basename':e['Data']['entityTemplate']['DepotPath'],'appearance':e['Data']['appearanceName'],'sector':sectorName})
             case 'worldInstancedMeshNode':
                 meshname = data['mesh']['DepotPath'] 
-                num=data['worldTransformsBuffer']['numElements']
-                start=data['worldTransformsBuffer']['startIndex']
                 if(meshname != 0):
-                    for i in range(start, start+num):
-                        instances = [x for x in t if x['NodeIndex'] == i]
-                        for inst in instances:
-                            if 'Data' in data['worldTransformsBuffer']['sharedDataBuffer'].keys():
-                                inst_trans=data['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][i]
-                            elif 'HandleRefId' in data['worldTransformsBuffer']['sharedDataBuffer'].keys():
-                                bufferID = int(data['worldTransformsBuffer']['sharedDataBuffer']['HandleRefId'])
-                                ref=e
-                                for n in nodes:
-                                    if n['HandleId']==str(bufferID-1):
-                                        ref=n
-                                inst_trans = ref['Data']['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][i]       
-                            else :
-                                print(e)
-                            pos = [inst_trans['translation']['X'] ,inst_trans['translation']['Y'] , inst_trans['translation']['Z'] ]
-                            if in_bounds(pos, bounds):
-                                meshes.append({'basename':data['mesh']['DepotPath'] ,'appearance':e['Data']['meshAppearance'],'sector':sectorName})
+                    meshes.append({'basename':data['mesh']['DepotPath'] ,'appearance':e['Data']['meshAppearance'],'sector':sectorName})
             case 'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode'| 'worldTerrainProxyMeshNode': 
                 if isinstance(e, dict) and 'mesh' in data.keys():
                     meshname = data['mesh']['DepotPath']
                     #print('Mesh name is - ',meshname, e['HandleId'])
                     if(meshname != 0):
                         #print('Mesh - ',meshname, ' - ',i, e['HandleId'])
-                        instances = [x for x in t if x['NodeIndex'] == i]
-                        for inst in instances:
-                            pos = get_pos_whole(inst)
-                            if in_bounds(pos, bounds):
-                                meshes.append({'basename':data['mesh']['DepotPath'] ,'appearance':e['Data']['meshAppearance'],'sector':sectorName})
+                        meshes.append({'basename':data['mesh']['DepotPath'] ,'appearance':e['Data']['meshAppearance'],'sector':sectorName})
             case 'worldInstancedDestructibleMeshNode':
                 #print('worldInstancedDestructibleMeshNode',i)
                 if isinstance(e, dict) and 'mesh' in data.keys():
                     meshname = data['mesh']['DepotPath']
                     #print('Mesh name is - ',meshname, e['HandleId'])
                     if(meshname != 0):
-                        instances = [x for x in t if x['NodeIndex'] == i]
-                        for inst in instances:
-                            pos = get_pos_whole(inst)
-                            if in_bounds(pos, bounds):
-                                meshes.append({'basename':data['mesh']['DepotPath'] ,'appearance':e['Data']['meshAppearance'],'sector':sectorName})
+                        meshes.append({'basename':data['mesh']['DepotPath'] ,'appearance':e['Data']['meshAppearance'],'sector':sectorName})
 
 len(meshes)                                            
 
@@ -155,6 +124,7 @@ if "MasterInstances" not in coll_scene.children.keys():
     coll_scene.children.link(coll_target)
 else:
     coll_target=bpy.data.collections.get("MasterInstances")
+
 Masters=coll_target
 Masters.hide_viewport=True
 
@@ -253,13 +223,13 @@ for filepath in jsonpath:
     else:
         Sector_coll=bpy.data.collections.new(sectorName)
         coll_scene.children.link(Sector_coll)       
-    
+
        
     meshes =  glob.glob(path+"\**\*.glb", recursive = True)
-    
+
     glbnames = [ os.path.basename(x) for x in meshes]
     meshnames = [ os.path.splitext(x)[0]+".mesh" for x in glbnames]
-    
+
     nodes = j["Data"]["RootChunk"]["nodes"]
     print(len(nodes))
     group=''
