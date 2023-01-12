@@ -173,7 +173,7 @@ for i,m in enumerate(meshes_w_apps):
         print(os.path.join(path, m[:-4]+'glb'),impapps)
         meshpath=os.path.join(path, m[:-4]+'glb')
         groupname = os.path.splitext(os.path.split(meshpath)[-1])[0]
-        if groupname in Masters.children.keys():
+        if groupname not in Masters.children.keys():
             try:
                 bpy.ops.io_scene_gltf.cp77(filepath=meshpath, appearances=impapps)
                 objs = C.selected_objects
