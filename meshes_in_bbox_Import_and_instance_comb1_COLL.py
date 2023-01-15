@@ -441,7 +441,7 @@ for filepath in jsonpath:
                                 else:
                                     print('Mesh not found - ',meshname, ' - ',i, e['HandleId'])
                                   
-            case 'xworldInstancedDestructibleMeshNode':
+            case 'worldInstancedDestructibleMeshNode':
                 #print('worldInstancedDestructibleMeshNode',i)
                 if isinstance(e, dict) and 'mesh' in data.keys():
                     meshname = data['mesh']['DepotPath']
