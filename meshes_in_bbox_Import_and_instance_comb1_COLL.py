@@ -124,7 +124,7 @@ for i,m in enumerate(meshes_w_apps):
         groupname = os.path.splitext(os.path.split(meshpath)[-1])[0]
         if groupname not in Masters.children.keys():
             try:
-                bpy.ops.io_scene_gltf.cp77(filepath=meshpath, appearances=impapps)
+                bpy.ops.io_scene_gltf.cp77(filepath=meshpath, appearances=impapps, update_gi=False)
                 objs = C.selected_objects
                 move_coll= coll_scene.children.get( objs[0].users_collection[0].name )
                 coll_target.children.link(move_coll) 
