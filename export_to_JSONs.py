@@ -1,6 +1,6 @@
 # Script to export CP2077 streaming sectors from Blender 
 # Just does changes to existing bits so far
-# By Simarilius Nov 2022
+# By Simarilius Jan 2023
 # latest version available at https://github.com/Simarilius-uk/CP2077_BlenderScripts
 
 import json
