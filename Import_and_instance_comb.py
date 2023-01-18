@@ -1,3 +1,9 @@
+# 
+# Streaming Sector Blender import Script for Cyberpunk 2077 by Simarilius
+# Jan 2023
+# Latest Version available at https://github.com/Simarilius-uk/CP2077_BlenderScripts
+#
+
 import json
 import glob
 import os
