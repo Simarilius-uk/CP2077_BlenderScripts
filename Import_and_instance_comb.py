@@ -29,7 +29,7 @@ def get_pos_whole(inst):
 
 
 # Enter the path to your projects source\raw\base folder below, needs double slashes between folder names.
-path = 'F:\\CPmod\\Glenn\\source\\raw\\base'
+path = 'F:\\CPmod\\meshdecal_parralax\\source\\raw\\base'
 
 jsonpath = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
 len(jsonpath)
@@ -130,7 +130,7 @@ for i,m in enumerate(meshes_w_apps):
         groupname = os.path.splitext(os.path.split(meshpath)[-1])[0]
         if groupname not in Masters.children.keys():
             try:
-                bpy.ops.io_scene_gltf.cp77(filepath=meshpath, appearances=impapps, update_gi=False)
+                bpy.ops.io_scene_gltf.cp77(filepath=meshpath, appearances=impapps)
                 objs = C.selected_objects
                 move_coll= coll_scene.children.get( objs[0].users_collection[0].name )
                 coll_target.children.link(move_coll) 
@@ -246,7 +246,7 @@ for filepath in jsonpath:
                         print('failed on ',os.path.basename(entpath))
                 if imported:
                     instances = [x for x in t if x['NodeIndex'] == i]
-                    for inst in instances:
+                    for idx,inst in enumerate(instances):
                         print(inst)
                         group=move_coll
                         groupname=move_coll.name
@@ -256,6 +256,7 @@ for filepath in jsonpath:
                             Sector_coll.children.link(new)
                             new['nodeType']=type
                             new['nodeIndex']=i
+                            new['instance_idx']=idx
                             new['debugName']=e['Data']['debugName']
                             new['sectorName']=sectorName 
                             new['HandleId']=e['HandleId']
@@ -293,10 +294,10 @@ for filepath in jsonpath:
                                         Sector_coll.children.link(new)
                                         new['nodeType']=type
                                         new['nodeIndex']=i
+                                        new['instance_idx']=idx
                                         new['mesh']=meshname
                                         new['debugName']=e['Data']['debugName']
                                         new['sectorName']=sectorName 
-                                        new['instance_idx']=idx
                                         for old_obj in group.all_objects:                            
                                             obj=old_obj.copy()  
                                             new.objects.link(obj)                                    
@@ -341,11 +342,12 @@ for filepath in jsonpath:
             case 'worldStaticDecalNode':
                 print('worldStaticDecalNode')
                 instances = [x for x in t if x['NodeIndex'] == i]
-                for inst in instances:
+                for idx,inst in enumerate(instances):
                     #print( inst)
                     o = bpy.data.objects.new( "empty", None )
                     o['nodeType']='worldStaticDecalNode'
                     o['nodeIndex']=i
+                    o['instance_idx']=idx
                     o['decal']=e['Data']['material']['DepotPath']
                     o['debugName']=e['Data']['debugName']
                     o['sectorName']=sectorName
@@ -427,11 +429,12 @@ for filepath in jsonpath:
                                 if (group):
                                     print('Group found for ',groupname) 
                                     instances = [x for x in t if x['NodeIndex'] == i]
-                                    for inst in instances:
+                                    for idx,inst in enumerate(instances):
                                         new=bpy.data.collections.new(groupname)
                                         Sector_coll.children.link(new)
                                         new['nodeType']=type
                                         new['nodeIndex']=i
+                                        new['instance_idx']=idx
                                         new['mesh']=meshname
                                         new['debugName']=e['Data']['debugName']
                                         new['sectorName']=sectorName
@@ -468,7 +471,8 @@ for filepath in jsonpath:
                                             new=bpy.data.collections.new(groupname)
                                             Sector_coll.children.link(new)
                                             new['nodeType']=type
-                                            new['nodeIndex']=i
+                                            new['nodeIndex']=i                                            
+                                            new['instance_idx']=idx
                                             new['mesh']=meshname
                                             new['debugName']=e['Data']['debugName']
                                             new['sectorName']=sectorName  
