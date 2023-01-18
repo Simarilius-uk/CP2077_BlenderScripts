@@ -1,6 +1,6 @@
 # Script to export CP2077 streaming sectors from Blender 
 # Just does changes to existing bits so far
-# By Simarilius Jan 2023
+# By Simarilius Nov 2022
 # latest version available at https://github.com/Simarilius-uk/CP2077_BlenderScripts
 
 import json
@@ -10,8 +10,13 @@ import bpy
 from mathutils import Vector, Matrix
 C = bpy.context
 
+#Set this to your project directory
 project = 'F:\\CPmod\\meshdecal_parralax'
 path = os.path.join(project,'source\\raw\\base')
+
+#its currently set to output the modified jsons to an output folder in the project dir (create one before running)
+#you can change this to a path if you prefer
+outpath = os.path.join(project,'output')
 
 
 
@@ -97,14 +102,9 @@ def find_decal(NodeIndex,Inst_idx,Sector_coll):
     else: 
         inst=[x for x in col if x['instance_idx']==Inst_idx]
         return inst[0]
-         
 
-jsonpath = os.path.join(project,'sectors')
-
-outpath = os.path.join(jsonpath,'output')
 jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
 
-#filepath=jsons[0]
 for filepath in jsons:
     with open(filepath,'r') as f: 
           j=json.load(f) 
@@ -139,7 +139,7 @@ for filepath in jsons:
                         set_pos(inst_trans,obj)
                         set_rot(inst_trans,obj)
                         set_scale(inst_trans,obj)
-            case 'xworldStaticDecalNode':
+            case 'worldStaticDecalNode':
                 print('worldStaticDecalNode')
                 instances = [x for x in t if x['NodeIndex'] == i]
                 for idx,inst in enumerate(instances):
