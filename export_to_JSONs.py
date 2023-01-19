@@ -7,6 +7,7 @@ import json
 import glob
 import os
 import bpy
+import copy
 from mathutils import Vector, Matrix
 C = bpy.context
 
@@ -103,6 +104,22 @@ def find_decal(NodeIndex,Inst_idx,Sector_coll):
         inst=[x for x in col if x['instance_idx']==Inst_idx]
         return inst[0]
 
+def createNodeData(t, col, nodeIndex, obj):
+    t.append({'Id':ID,'Uk10':1088,'Uk11':256,'Uk12':0,'UkFloat1':60.47757,'UkHash1':1088,'QuestPrefabRefHash': 0,'MaxStreamingDistance': 3.4028235e+38})
+    new = t[len(t)-1]
+    new['NodeIndex']=nodeIndex
+    new['Position']={'$type': 'Vector4','W':0,'X':float("{:.9g}".format(obj.location[0]*100)),'Y':float("{:.9g}".format(obj.location[1]*100)),'Z':float("{:.9g}".format(obj.location[2]*100))}
+    new['Pivot']= {'$type': 'Vector3', 'X': 0, 'Y': 0, 'Z': 0}
+    new['Bounds']= {'$type': 'Box'}
+    new['Bounds']['Max']={'$type': 'Vector4','X':float("{:.9g}".format(obj.location[0]*100)),'Y':float("{:.9g}".format(obj.location[1]*100)),'Z':float("{:.9g}".format(obj.location[2]*100))}
+    new['Bounds']['Min']={'$type': 'Vector4','X':float("{:.9g}".format(obj.location[0]*100)),'Y':float("{:.9g}".format(obj.location[1]*100)),'Z':float("{:.9g}".format(obj.location[2]*100))}
+    new['Orientation']={'$type': 'Quaternion','r':float("{:.9g}".format(obj.rotation_quaternion[0])),'i':float("{:.9g}".format(obj.rotation_quaternion[1])),'j':float("{:.9g}".format(obj.rotation_quaternion[2])),'k':float("{:.9g}".format(obj.rotation_quaternion[3]))}
+    new['Scale']= {'$type': 'Vector3', 'X':  float("{:.9g}".format(obj.scale[0]*100)), 'Y':  float("{:.9g}".format(obj.scale[1]*100)), 'Z':  float("{:.9g}".format(obj.scale[2]*100))}
+    
+
+
+
+
 jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
 
 for filepath in jsons:
@@ -113,6 +130,7 @@ for filepath in jsons:
     sectorName=os.path.basename(filepath)[:-5]
 
     Sector_coll=bpy.data.collections.get(sectorName)
+    Sector_coll['jsonpath']=filepath
     Sector_additions_coll=bpy.data.collections.get(sectorName+'_new')
     for i,e in enumerate(nodes):
         data = e['Data']
@@ -184,21 +202,27 @@ for filepath in jsons:
             if 'nodeIndex' in col.keys() and col['sectorName']==sectorName and len(col.objects)>0:
                 match col['nodeType']:
                     case 'worldInstancedMeshNode'|'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode' | 'worldTerrainProxyMeshNode':
-                        t.append({'Id':ID,'Uk10':1088,'Uk11':256,'Uk12':0,'UkFloat1':60.47757,'UkHash1':1088,'QuestPrefabRefHash': 0,'MaxStreamingDistance': 3.4028235e+38})
-                        new = t[len(t)-1]
-                        new['NodeIndex']=col['nodeIndex']
                         obj=col.objects[0]
-                        new['Position']={'$type': 'Vector4','W':0,'X':float("{:.9g}".format(obj.location[0]*100)),'Y':float("{:.9g}".format(obj.location[1]*100)),'Z':float("{:.9g}".format(obj.location[2]*100))}
-                        new['Pivot']= {'$type': 'Vector3', 'X': 0, 'Y': 0, 'Z': 0}
-                        new['Bounds']= {'$type': 'Box'}
-                        new['Bounds']['Max']={'$type': 'Vector4','X':float("{:.9g}".format(obj.location[0]*100)),'Y':float("{:.9g}".format(obj.location[1]*100)),'Z':float("{:.9g}".format(obj.location[2]*100))}
-                        new['Bounds']['Min']={'$type': 'Vector4','X':float("{:.9g}".format(obj.location[0]*100)),'Y':float("{:.9g}".format(obj.location[1]*100)),'Z':float("{:.9g}".format(obj.location[2]*100))}
-                        new['Orientation']={'$type': 'Quaternion','r':float("{:.9g}".format(obj.rotation_quaternion[0])),'i':float("{:.9g}".format(obj.rotation_quaternion[1])),'j':float("{:.9g}".format(obj.rotation_quaternion[2])),'k':float("{:.9g}".format(obj.rotation_quaternion[3]))}
-                        new['Scale']= {'$type': 'Vector3', 'X':  float("{:.9g}".format(obj.scale[0]*100)), 'Y':  float("{:.9g}".format(obj.scale[1]*100)), 'Z':  float("{:.9g}".format(obj.scale[2]*100))}
+                        createNodeData(t, col, col['nodeIndex'], obj)
                         ID+=1
-
-        
-        
+            elif 'nodeIndex' in col.keys() and col['sectorName'] in bpy.data.collections.keys() and len(col.objects)>0:
+                match col['nodeType']:
+                    case 'worldInstancedMeshNode'|'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode' | 'worldTerrainProxyMeshNode':
+                        source_sector=col['sectorName']
+                        print(source_sector)
+                        source_sect_coll=bpy.data.collections.get(source_sector)
+                        source_sect_json_path=source_sect_coll['filepath']
+                        print(source_sect_json_path)
+                        with open(source_sect_json_path,'r') as f: 
+                            source_sect_json=json.load(f) 
+                        source_nodes = source_sect_json["Data"]["RootChunk"]["nodes"]
+                        print(len(source_nodes),col['nodeIndex'])
+                        print(source_nodes[col['nodeIndex']])
+                        nodes.append(copy.deepcopy(source_nodes[col['nodeIndex']]))
+                        new_Index=len(nodes)-1
+                        nodes[new_Index]['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
+                        obj=col.objects[0]
+                        createNodeData(t, col, new_Index, obj)
 
     
 
