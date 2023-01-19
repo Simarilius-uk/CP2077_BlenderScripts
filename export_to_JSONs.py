@@ -121,7 +121,9 @@ def createNodeData(t, col, nodeIndex, obj):
 
 
 jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
-
+bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(0,0,0))
+neg_cube=C.selected_objects[0]
+neg_cube.scale=(-1,-1,-1)
 for filepath in jsons:
     with open(filepath,'r') as f: 
           j=json.load(f) 
@@ -142,11 +144,10 @@ for filepath in jsons:
                 start=data['worldTransformsBuffer']['startIndex']
                 if(meshname != 0):
                     for idx in range(start, start+num):
-                        obj_col=find_col(i,idx,Sector_coll)
-                        obj=obj_col.objects[0]
+                        
                         if 'Data' in data['worldTransformsBuffer']['sharedDataBuffer'].keys():
-                            inst_trans=data['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]
-                                   
+                                inst_trans=data['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]
+                                       
                         elif 'HandleRefId' in data['worldTransformsBuffer']['sharedDataBuffer'].keys():
                             bufferID = int(data['worldTransformsBuffer']['sharedDataBuffer']['HandleRefId'])
                             ref=e
@@ -154,17 +155,28 @@ for filepath in jsons:
                                 if n['HandleId']==str(bufferID-1):
                                     ref=n
                             inst_trans = ref['Data']['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]
-                        set_pos(inst_trans,obj)
-                        set_rot(inst_trans,obj)
-                        set_scale(inst_trans,obj)
+                        obj_col=find_col(i,idx,Sector_coll)    
+                        if obj_col:
+                            if len(obj_col.objects)>0:
+                                obj=obj_col.objects[0]
+                                set_pos(inst_trans,obj)
+                                set_rot(inst_trans,obj)
+                                set_scale(inst_trans,obj)
+                            else:
+                                obj=neg_cube
+                                set_scale(inst_trans,obj)
             case 'worldStaticDecalNode':
                 print('worldStaticDecalNode')
                 instances = [x for x in t if x['NodeIndex'] == i]
                 for idx,inst in enumerate(instances):
                     obj=find_decal(i,idx,Sector_coll)
-                    set_pos(inst,obj)
-                    set_rot(inst,obj)
-                    set_scale(inst,obj)
+                    if obj:
+                        set_pos(inst,obj)
+                        set_rot(inst,obj)
+                        set_scale(inst,obj)
+                    else:
+                        obj=neg_cube
+                        set_scale(inst_trans,obj)
             case 'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode'| 'worldTerrainProxyMeshNode': 
                 if isinstance(e, dict) and 'mesh' in data.keys():
                     meshname = data['mesh']['DepotPath']
@@ -173,11 +185,16 @@ for filepath in jsons:
                         instances = [x for x in t if x['NodeIndex'] == i]
                         for idx,inst in enumerate(instances):
                             obj_col=find_col(i,idx,Sector_coll)
+                            print(obj_col)
                             if obj_col:
-                                obj=obj_col.objects[0]
-                                set_pos(inst,obj)
-                                set_rot(inst,obj)
-                                set_scale(inst,obj)
+                                if len(obj_col.objects)>0:
+                                    obj=obj_col.objects[0]
+                                    set_pos(inst,obj)
+                                    set_rot(inst,obj)
+                                    set_scale(inst,obj)
+                                else:
+                                    obj=neg_cube
+                                    set_scale(inst,obj)
             case 'worldInstancedDestructibleMeshNode':
                 #print('worldInstancedDestructibleMeshNode',i)
                 if isinstance(e, dict) and 'mesh' in data.keys():
@@ -188,10 +205,15 @@ for filepath in jsons:
                     for inst in instances:
                         for idx in range(start, start+num):
                             obj_col=find_col(i,idx,Sector_coll)
-                            obj=obj_col.objects[0]
-                            set_pos(inst,obj)
-                            set_rot(inst,obj)
-                            set_scale(inst,obj)
+                            if obj_col:
+                                if len(obj_col.objects)>0:
+                                    obj=obj_col.objects[0]
+                                    set_pos(inst,obj)
+                                    set_rot(inst,obj)
+                                    set_scale(inst,obj)
+                                else:
+                                    obj=neg_cube
+                                    set_scale(inst,obj)
 
     ID=666
     for node in t:
