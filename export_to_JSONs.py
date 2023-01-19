@@ -1,6 +1,6 @@
 # Script to export CP2077 streaming sectors from Blender 
 # Just does changes to existing bits so far
-# By Simarilius Nov 2022
+# By Simarilius Jan 2023
 # latest version available at https://github.com/Simarilius-uk/CP2077_BlenderScripts
 
 import json
@@ -113,7 +113,7 @@ for filepath in jsons:
     sectorName=os.path.basename(filepath)[:-5]
 
     Sector_coll=bpy.data.collections.get(sectorName)
-
+    Sector_additions_coll=bpy.data.collections.get(sectorName+'_new')
     for i,e in enumerate(nodes):
         data = e['Data']
         type = data['$type']
@@ -174,9 +174,29 @@ for filepath in jsons:
                             set_pos(inst,obj)
                             set_rot(inst,obj)
                             set_scale(inst,obj)
-        
-        
-        
+
+    ID=666
+    for node in t:
+        if node['Id']>ID:
+            ID=node['Id']+1
+    if Sector_additions_coll:
+        for col in Sector_additions_coll.children:
+            if 'nodeIndex' in col.keys() and col['sectorName']==sectorName and len(col.objects)>0:
+                match col['nodeType']:
+                    case 'worldInstancedMeshNode'|'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode' | 'worldTerrainProxyMeshNode':
+                        t.append({'Id':ID,'Uk10':1088,'Uk11':256,'Uk12':0,'UkFloat1':60.47757,'UkHash1':1088,'QuestPrefabRefHash': 0,'MaxStreamingDistance': 3.4028235e+38})
+                        new = t[len(t)-1]
+                        new['NodeIndex']=col['nodeIndex']
+                        obj=col.objects[0]
+                        new['Position']={'$type': 'Vector4','W':0,'X':float("{:.9g}".format(obj.location[0]*100)),'Y':float("{:.9g}".format(obj.location[1]*100)),'Z':float("{:.9g}".format(obj.location[2]*100))}
+                        new['Pivot']= {'$type': 'Vector3', 'X': 0, 'Y': 0, 'Z': 0}
+                        new['Bounds']= {'$type': 'Box'}
+                        new['Bounds']['Max']={'$type': 'Vector4','X':float("{:.9g}".format(obj.location[0]*100)),'Y':float("{:.9g}".format(obj.location[1]*100)),'Z':float("{:.9g}".format(obj.location[2]*100))}
+                        new['Bounds']['Min']={'$type': 'Vector4','X':float("{:.9g}".format(obj.location[0]*100)),'Y':float("{:.9g}".format(obj.location[1]*100)),'Z':float("{:.9g}".format(obj.location[2]*100))}
+                        new['Orientation']={'$type': 'Quaternion','r':float("{:.9g}".format(obj.rotation_quaternion[0])),'i':float("{:.9g}".format(obj.rotation_quaternion[1])),'j':float("{:.9g}".format(obj.rotation_quaternion[2])),'k':float("{:.9g}".format(obj.rotation_quaternion[3]))}
+                        new['Scale']= {'$type': 'Vector3', 'X':  float("{:.9g}".format(obj.scale[0]*100)), 'Y':  float("{:.9g}".format(obj.scale[1]*100)), 'Z':  float("{:.9g}".format(obj.scale[2]*100))}
+                        ID+=1
+
         
         
 
