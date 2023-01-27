@@ -2,6 +2,20 @@
 # Just does changes to existing bits so far
 # By Simarilius Jan 2023
 # latest version available at https://github.com/Simarilius-uk/CP2077_BlenderScripts
+#
+#  __       __   ___  __   __                        __   ___  __  ___  __   __      ___  __    ___         __  
+# /  ` \ / |__) |__  |__) |__) |  | |\ | |__/       /__` |__  /  `  |  /  \ |__)    |__  |  \ |  |  | |\ | / _` 
+# \__,  |  |__) |___ |  \ |    \__/ | \| |  \       .__/ |___ \__,  |  \__/ |  \    |___ |__/ |  |  | | \| \__> 
+#                                                                                                              
+# Havent written a tutorial for this yet so thought I should add some instructions
+# 1) Import the sector you want to edit using the Import_and_instance_comb.py script from the github linked above.
+# 2) You can move the existing objects around and this will be exported
+# 3) If you delete the mesh from a collector but leave the collector, the script will set the scale for that instance to -1 which stops it rendering in game
+# 4) to add new stuff create a new collector with the sector name with _new on the end ie interior_1_1_0_1.streamingsector_new and then copy any objects you want into it.
+# 5) If its stuff already in the sector it will create nodeData nodes to instance it, if its from another imported sector it will copy the main node too
+#    Its assuming it can find the json for the sector its copying from in the project, dont be clever merging blends or whatever.
+# 6) not all nodetypes are supported yet, have a look at the case statements to see which are
+# 
 
 import json
 import glob
@@ -124,6 +138,11 @@ jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
 bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(0,0,0))
 neg_cube=C.selected_objects[0]
 neg_cube.scale=(-1,-1,-1)
+
+ #       __               __      __  ___       ___  ___ 
+ # |\/| /  \ \  / | |\ | / _`    /__`  |  |  | |__  |__  
+ # |  | \__/  \/  | | \| \__>    .__/  |  \__/ |    |    
+                                                      
 for filepath in jsons:
     with open(filepath,'r') as f: 
           j=json.load(f) 
@@ -215,6 +234,11 @@ for filepath in jsons:
                                     obj=neg_cube
                                     set_scale(inst,obj)
 
+                                    
+#       __   __          __      __  ___       ___  ___ 
+#  /\  |  \ |  \ | |\ | / _`    /__`  |  |  | |__  |__  
+# /~~\ |__/ |__/ | | \| \__>    .__/  |  \__/ |    |    
+#                                                                                          
     ID=666
     for node in t:
         if node['Id']>ID:
@@ -247,7 +271,7 @@ for filepath in jsons:
                         createNodeData(t, col, new_Index, obj)
 
     
-
+    # Export the modified json
 
     pathout=os.path.join(outpath,os.path.basename(filepath))
     with open(pathout, 'w') as outfile:
