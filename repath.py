@@ -1,6 +1,19 @@
 # Script to repath a mesh file
 # Simarilius Jan 2023
+# ______                 _   _                           _   _      
+# | ___ \               | | | |                         | | (_)     
+# | |_/ /___ _ __   __ _| |_| |__   ___  _ __ ___   __ _| |_ _  ___ 
+# |    // _ \ '_ \ / _` | __| '_ \ / _ \| '_ ` _ \ / _` | __| |/ __|
+# | |\ \  __/ |_) | (_| | |_| | | | (_) | | | | | | (_| | |_| | (__ 
+# \_| \_\___| .__/ \__,_|\__|_| |_|\___/|_| |_| |_|\__,_|\__|_|\___|
+#           | |                                                     
+#           |_|                                                    
 #
+# To use fill in the old_mi and new_mi lists with matching pairs of old and new mi names, and export the meshes that need modifying to json in wkit.
+# Set the project path variable below to your project then run the script.
+# Will change all instances of the old mi to the mi with the same index in the new list (so 2nd for 2nd etc)
+# Will save over the original json
+# 
 
 from dataclasses import replace
 import os
