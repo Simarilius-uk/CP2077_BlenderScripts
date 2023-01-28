@@ -36,7 +36,7 @@ outpath = os.path.join(project,'output')
 
 
 def set_pos(inst,obj):  
-    print(inst)  
+    #print(inst)  
     if 'Position'in inst.keys():
         if 'Properties' in inst['Position'].keys():
             inst['Position']['Properties']['X']= float("{:.9g}".format(obj.location[0]*100))
@@ -51,6 +51,10 @@ def set_pos(inst,obj):
                 inst['Position']['x'] = float("{:.9g}".format(obj.location[0]*100))
                 inst['Position']['y'] = float("{:.9g}".format(obj.location[1]*100))
                 inst['Position']['z'] = float("{:.9g}".format(obj.location[2]*100))
+    elif 'position' in inst.keys():
+        inst['position']['X'] = float("{:.9g}".format(obj.location[0]*100))
+        inst['position']['Y'] = float("{:.9g}".format(obj.location[1]*100))
+        inst['position']['Z'] = float("{:.9g}".format(obj.location[2]*100))
     elif 'translation' in inst.keys():
         inst['translation']['X'] = float("{:.9g}".format(obj.location[0]*100))
         inst['translation']['Y'] = float("{:.9g}".format(obj.location[1]*100))
@@ -74,6 +78,11 @@ def set_rot(inst,obj):
             inst['Rotation']['i'] = float("{:.9g}".format(obj.rotation_quaternion[1] )) 
             inst['Rotation']['j'] = float("{:.9g}".format(obj.rotation_quaternion[2] ))
             inst['Rotation']['k'] = float("{:.9g}".format(obj.rotation_quaternion[3] ))
+    elif 'rotation' in inst.keys():
+            inst['rotation']['r'] = float("{:.9g}".format(obj.rotation_quaternion[0] ))
+            inst['rotation']['i'] = float("{:.9g}".format(obj.rotation_quaternion[1] )) 
+            inst['rotation']['j'] = float("{:.9g}".format(obj.rotation_quaternion[2] ))
+            inst['rotation']['k'] = float("{:.9g}".format(obj.rotation_quaternion[3] ))
 
 
 def set_scale(inst,obj):
@@ -86,7 +95,10 @@ def set_scale(inst,obj):
             inst['Scale']['X']  = float("{:.9g}".format(obj.scale[0]*100))
             inst['Scale']['Y']  = float("{:.9g}".format(obj.scale[1]*100))
             inst['Scale']['Z']  = float("{:.9g}".format(obj.scale[2]*100))
-
+    elif 'scale' in inst.keys():
+            inst['scale']['X']  = float("{:.9g}".format(obj.scale[0]*100))
+            inst['scale']['Y']  = float("{:.9g}".format(obj.scale[1]*100))
+            inst['scale']['Z']  = float("{:.9g}".format(obj.scale[2]*100))
 
 def set_bounds(node, obj):
         node["Bounds"]['Max']["X"]= float("{:.9g}".format(obj.location[0]*100))
@@ -97,7 +109,7 @@ def set_bounds(node, obj):
         node["Bounds"]['Min']["Z"]= float("{:.9g}".format(obj.location[2]*100))
 
 def find_col(NodeIndex,Inst_idx,Sector_coll):
-    print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
+    #print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
     col=[x for x in Sector_coll.children if x['nodeIndex']==NodeIndex]
     if len(col)==0:
         return None
@@ -108,7 +120,7 @@ def find_col(NodeIndex,Inst_idx,Sector_coll):
         return inst[0]
 
 def find_decal(NodeIndex,Inst_idx,Sector_coll):
-    print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
+    #print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
     col=[x for x in Sector_coll.objects if x['nodeIndex']==NodeIndex]
     if len(col)==0:
         return none
@@ -118,7 +130,8 @@ def find_decal(NodeIndex,Inst_idx,Sector_coll):
         inst=[x for x in col if x['instance_idx']==Inst_idx]
         return inst[0]
 
-def createNodeData(t, col, nodeIndex, obj):
+def createNodeData(t, col, nodeIndex, obj, ID):
+    print(ID)
     t.append({'Id':ID,'Uk10':1088,'Uk11':256,'Uk12':0,'UkFloat1':60.47757,'UkHash1':1088,'QuestPrefabRefHash': 0,'MaxStreamingDistance': 3.4028235e+38})
     new = t[len(t)-1]
     new['NodeIndex']=nodeIndex
@@ -142,6 +155,7 @@ neg_cube.scale=(-1,-1,-1)
  #       __               __      __  ___       ___  ___ 
  # |\/| /  \ \  / | |\ | / _`    /__`  |  |  | |__  |__  
  # |  | \__/  \/  | | \| \__>    .__/  |  \__/ |    |    
+ #
                                                       
 for filepath in jsons:
     with open(filepath,'r') as f: 
@@ -185,7 +199,7 @@ for filepath in jsons:
                                 obj=neg_cube
                                 set_scale(inst_trans,obj)
             case 'worldStaticDecalNode':
-                print('worldStaticDecalNode')
+                #print('worldStaticDecalNode')
                 instances = [x for x in t if x['NodeIndex'] == i]
                 for idx,inst in enumerate(instances):
                     obj=find_decal(i,idx,Sector_coll)
@@ -204,7 +218,7 @@ for filepath in jsons:
                         instances = [x for x in t if x['NodeIndex'] == i]
                         for idx,inst in enumerate(instances):
                             obj_col=find_col(i,idx,Sector_coll)
-                            print(obj_col)
+                            #print(obj_col)
                             if obj_col:
                                 if len(obj_col.objects)>0:
                                     obj=obj_col.objects[0]
@@ -247,13 +261,66 @@ for filepath in jsons:
         for col in Sector_additions_coll.children:
             if 'nodeIndex' in col.keys() and col['sectorName']==sectorName and len(col.objects)>0:
                 match col['nodeType']:
-                    case 'worldInstancedMeshNode'|'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode' | 'worldTerrainProxyMeshNode':
+                    case 'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode' | 'worldTerrainProxyMeshNode':
                         obj=col.objects[0]
-                        createNodeData(t, col, col['nodeIndex'], obj)
+                        createNodeData(t, col, col['nodeIndex'], obj,ID)
                         ID+=1
+                        
+                    case 'worldInstancedMeshNode':
+                        obj=col.objects[0]
+                        nodeIndex=col['nodeIndex']
+                        base=nodes[nodeIndex]['Data']
+                        meshname = col['mesh']
+                        #print(base)
+                        num=base['worldTransformsBuffer']['numElements']
+                        start=base['worldTransformsBuffer']['startIndex']
+                        base['worldTransformsBuffer']['numElements']=num+1
+                        print('start ',start,' num ',num)
+                        #Need to build the transform to go in the sharedDataBuffer
+                        trans= {"$type": "worldNodeTransform","rotation": {"$type": "Quaternion","i": 0.0, "j": 0.0,"k": 0.0, "r": 1.0 },
+                          "translation": {"$type": "Vector3",  "X": 0.0,"Y": 0.0, "Z": 0.0 },'scale': {'$type': 'Vector3', 'X': 1.0, 'Y': 1.0, 'Z': 1.0} }
+                        set_pos(trans,obj)
+                        set_rot(trans,obj)
+                        set_scale(trans,obj)
+                        print(trans)
+                        
+                        if(meshname != 0):
+                            idx =start+num
+                            if 'Data' in base['worldTransformsBuffer']['sharedDataBuffer'].keys():
+                                #if the transforms are in the nodeData itself we can just add to the end of it
+                                base['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'].append(trans)
+                                           
+                            elif 'HandleRefId' in base['worldTransformsBuffer']['sharedDataBuffer'].keys():
+                                # transforms are in a shared buffer in another nodeData need to insert then update all the references to the shared buffer
+                                bufferID = int(base['worldTransformsBuffer']['sharedDataBuffer']['HandleRefId'])
+                                ref=base
+                                for n in nodes:
+                                    if n['HandleId']==str(bufferID-1):
+                                        ref=n
+                                wtbbuffer=ref['Data']['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']
+                                print('Before = ',len(wtbbuffer['Transforms']))
+                                print('inserting at ',idx)
+                                wtbbuffer['Transforms'].insert(idx,trans)
+                                print('After = ',len(wtbbuffer['Transforms']))
+                                #Need to fix all the start pos for any instances after the node we're processing. What a ballache
+                                for i,e in enumerate(nodes):
+                                    data = e['Data']
+                                    type = data['$type']
+                                    if type=='worldInstancedMeshNode':
+                                        wtb=data['worldTransformsBuffer']
+                                        if 'HandleRefId' in wtb['sharedDataBuffer'].keys()==bufferID:
+                                            if wtb['startIndex']>start:
+                                                wtb['startIndex']=wtb['startIndex']+1
+
+                        
+                        
+                        
+                        
+                        
+                        
             elif 'nodeIndex' in col.keys() and col['sectorName'] in bpy.data.collections.keys() and len(col.objects)>0:
                 match col['nodeType']:
-                    case 'worldInstancedMeshNode'|'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode' | 'worldTerrainProxyMeshNode':
+                    case 'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode' | 'worldTerrainProxyMeshNode':
                         source_sector=col['sectorName']
                         print(source_sector)
                         source_sect_coll=bpy.data.collections.get(source_sector)
@@ -268,7 +335,8 @@ for filepath in jsons:
                         new_Index=len(nodes)-1
                         nodes[new_Index]['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
                         obj=col.objects[0]
-                        createNodeData(t, col, new_Index, obj)
+                        createNodeData(t, col, new_Index, obj,ID)
+                        ID+=1
 
     
     # Export the modified json
