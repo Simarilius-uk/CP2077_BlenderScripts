@@ -151,7 +151,7 @@ for filepath in jsons:
     sectorName=os.path.basename(filepath)[:-5]
 
     Sector_coll=bpy.data.collections.get(sectorName)
-    Sector_coll['jsonpath']=filepath
+    Sector_coll['filepath']=filepath
     Sector_additions_coll=bpy.data.collections.get(sectorName+'_new')
     for i,e in enumerate(nodes):
         data = e['Data']
