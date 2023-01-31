@@ -15,11 +15,11 @@ from pprint import pprint
 
 
 # Enter the path to your projects source\raw\base folder below, needs double slashes between folder names.
-path = 'F:\\CPmod\\meshdecal_parralax\\source\\raw\\base'
+path = 'F:\\CPmod\\ElCoyote\\source\\raw\\base'
 
 # If your importing to edit the sectors and want to add stuff then set the below to True and it will auto create the _new collectors
 am_modding=True
-
+want_collisions = False
 
 
 C = bpy.context
@@ -38,7 +38,7 @@ def get_pos_whole(inst):
 
 
 
-jsonpath = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
+jsonpath = glob.glob(path+"\**\*1.streamingsector.json", recursive = True)
 len(jsonpath)
 
 meshes=[]
@@ -210,7 +210,7 @@ for filepath in jsonpath:
           
     t=j['Data']['RootChunk']['nodeData']['Data']
     sectorName=os.path.basename(filepath)[:-5]
-
+    
     if sectorName in coll_scene.children.keys():
         Sector_coll=bpy.data.collections.get(sectorName)
     else:
@@ -284,8 +284,9 @@ for filepath in jsonpath:
                                 curse=bpy.context.scene.cursor.location
                                 with bpy.context.temp_override(selected_editable_objects=obj):
                                     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-                                
-                                obj.location = get_pos(inst)
+                                pos=get_pos(inst)
+                                # objects may already be offset by the entity import, need to preserve that.
+                                obj.location = (obj.location.x*.01+pos[0],obj.location.y*.01+pos[1],obj.location.z*.01+pos[2])
                                 obj.rotation_quaternion = get_rot(inst)
                                 obj.scale = get_scale(inst)
                                 bpy.context.scene.cursor.location=curse 
@@ -335,8 +336,6 @@ for filepath in jsonpath:
                                             if obj.location.x == 0:
                                                 print('Mesh - ',meshname, ' - ',i,'HandleId - ', e['HandleId'])      
                                             
-                                            #print(i,obj.name,' x= ',obj.location.x, ' y= ', obj.location.y, ' z= ',obj.location.z)
-                                     
                                             obj.rotation_quaternion.x = inst_trans['rotation']['i']
                                             obj.rotation_quaternion.y = inst_trans['rotation']['j']
                                             obj.rotation_quaternion.z = inst_trans['rotation']['k']
@@ -356,6 +355,7 @@ for filepath in jsonpath:
                 pass
             case 'worldStaticDecalNode':
                 print('worldStaticDecalNode')
+                # decals are imported as planes tagged with the material details so you can see what they are and move them.
                 instances = [x for x in t if x['NodeIndex'] == i]
                 for idx,inst in enumerate(instances):
                     #print( inst)
@@ -537,59 +537,68 @@ for filepath in jsonpath:
                                 else:
                                     print('Mesh not found - ',meshname, ' - ',i, e['HandleId'])
             case 'worldCollisionNode':
-                print('worldCollisionNode',i)
-                sector_Collisions=sectorName+'_colls'
-                if sector_Collisions in coll_scene.children.keys():
-                    sector_Collisions_coll=bpy.data.collections.get(sector_Collisions)
-                else:
-                    sector_Collisions_coll=bpy.data.collections.new(sector_Collisions)
-                    coll_scene.children.link(sector_Collisions_coll) 
-                Actors=e['Data']['compiledData']['Data']['Actors']
-                for idx,act in enumerate(Actors):
-                    print(len(act['Shapes']))
-                    x=act['Position']['x']['Bits']/13107200  # this has /100 built in
-                    y=act['Position']['y']['Bits']/13107200
-                    z=act['Position']['z']['Bits']/13107200
-                    arot=get_rot(act)
-                    for s,shape in enumerate(act['Shapes']):
-                        if shape['ShapeType']=='Box':
-                            print('Box Collision Node')
-                            #pprint(act['Shapes'])
-                            ssize=shape['Size']
-                            spos=get_pos(shape)
-                            srot=get_rot(shape)
-                            arot_q = Quaternion((arot[0],arot[1],arot[2],arot[3]))
-                            srot_q = Quaternion((srot[0],srot[1],srot[2],srot[3]))
-                            rot= arot_q @ srot_q
-                            loc=(spos[0]+x,spos[1]+y,spos[2]+z)
-                            bpy.ops.mesh.primitive_cube_add(size=.01, scale=(ssize['X'],ssize['Y'],ssize['Z']),location=loc)
-                            cube=C.selected_objects[0]
-                            sector_Collisions_coll.objects.link(cube)
-                            cube['nodeIndex']=i
-                            cube['ShapeType']=shape['ShapeType']
-                            cube['ShapeNo']=s
-                            cube['ActorIdx']=idx
-                            cube['sectorName']=sectorName
+                
+#   ______      _____      _                 
+#  / ____/___  / / (_)____(_)___  ____  _____
+# / /   / __ \/ / / / ___/ / __ \/ __ \/ ___/
+#/ /___/ /_/ / / / (__  ) / /_/ / / / (__  ) 
+#\____/\____/_/_/_/____/_/\____/_/ /_/____/  
+#                                            
+# Collisions are only partially supported, cant get the mesh object ones out of the geomCache from wkit enmasse currently so only box and capsule ones
+                if want_collisions:
+                    print('worldCollisionNode',i)
+                    sector_Collisions=sectorName+'_colls'
+                    if sector_Collisions in coll_scene.children.keys():
+                        sector_Collisions_coll=bpy.data.collections.get(sector_Collisions)
+                    else:
+                        sector_Collisions_coll=bpy.data.collections.new(sector_Collisions)
+                        coll_scene.children.link(sector_Collisions_coll) 
+                    Actors=e['Data']['compiledData']['Data']['Actors']
+                    for idx,act in enumerate(Actors):
+                        print(len(act['Shapes']))
+                        x=act['Position']['x']['Bits']/13107200  # this has /100 built in
+                        y=act['Position']['y']['Bits']/13107200
+                        z=act['Position']['z']['Bits']/13107200
+                        arot=get_rot(act)
+                        for s,shape in enumerate(act['Shapes']):
+                            if shape['ShapeType']=='Box':
+                                print('Box Collision Node')
+                                #pprint(act['Shapes'])
+                                ssize=shape['Size']
+                                spos=get_pos(shape)
+                                srot=get_rot(shape)
+                                arot_q = Quaternion((arot[0],arot[1],arot[2],arot[3]))
+                                srot_q = Quaternion((srot[0],srot[1],srot[2],srot[3]))
+                                rot= arot_q @ srot_q
+                                loc=(spos[0]+x,spos[1]+y,spos[2]+z)
+                                bpy.ops.mesh.primitive_cube_add(size=.01, scale=(ssize['X'],ssize['Y'],ssize['Z']),location=loc)
+                                cube=C.selected_objects[0]
+                                sector_Collisions_coll.objects.link(cube)
+                                cube['nodeIndex']=i
+                                cube['ShapeType']=shape['ShapeType']
+                                cube['ShapeNo']=s
+                                cube['ActorIdx']=idx
+                                cube['sectorName']=sectorName
                             
-                        elif shape['ShapeType']=='Capsule':
-                            print('Capsule Collision Node')
-                            ssize=shape['Size']
-                            spos=get_pos(shape)
-                            srot=get_rot(shape)
-                            arot_q = Quaternion((arot[0],arot[1],arot[2],arot[3]))
-                            srot_q = Quaternion((srot[0],srot[1],srot[2],srot[3]))
-                            rot= arot_q @ srot_q
-                            loc=(spos[0]+x,spos[1]+y,spos[2]+z)
-                            bpy.ops.mesh.primitive_cylinder_add(radius=.005, depth=0.01, scale=(ssize['X'],ssize['Y'],ssize['Z']),location=loc)
-                            capsule=C.selected_objects[0]
-                            sector_Collisions_coll.objects.link(capsule)
-                            capsule['nodeIndex']=i
-                            capsule['ShapeType']=shape['ShapeType']
-                            capsule['ShapeNo']=s
-                            capsule['ActorIdx']=idx
-                            capsule['sectorName']=sectorName
-                        else: 
-                            print(shape['ShapeType'], ' not supported yet')
+                            elif shape['ShapeType']=='Capsule':
+                                print('Capsule Collision Node')
+                                ssize=shape['Size']
+                                spos=get_pos(shape)
+                                srot=get_rot(shape)
+                                arot_q = Quaternion((arot[0],arot[1],arot[2],arot[3]))
+                                srot_q = Quaternion((srot[0],srot[1],srot[2],srot[3]))
+                                rot= arot_q @ srot_q
+                                loc=(spos[0]+x,spos[1]+y,spos[2]+z)
+                                bpy.ops.mesh.primitive_cylinder_add(radius=.005, depth=0.01, scale=(ssize['X'],ssize['Y'],ssize['Z']),location=loc)
+                                capsule=C.selected_objects[0]
+                                sector_Collisions_coll.objects.link(capsule)
+                                capsule['nodeIndex']=i
+                                capsule['ShapeType']=shape['ShapeType']
+                                capsule['ShapeNo']=s
+                                capsule['ActorIdx']=idx
+                                capsule['sectorName']=sectorName
+                            else: 
+                                print(shape['ShapeType'], ' not supported yet')
                         
             
             case _:
