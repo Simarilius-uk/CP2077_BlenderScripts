@@ -15,7 +15,7 @@ from pprint import pprint
 
 
 # Enter the path to your projects source\raw\base folder below, needs double slashes between folder names.
-path = 'F:\\CPmod\\ElCoyote\\source\\raw\\base'
+path = 'F:\\CPmod\\meshdecal_parralax\\source\\raw\\base'
 
 # If your importing to edit the sectors and want to add stuff then set the below to True and it will auto create the _new collectors
 am_modding=True
@@ -26,19 +26,24 @@ C = bpy.context
 
 def get_pos_whole(inst):
     pos=[0,0,0]
-    if 'Properties' in inst['Position'].keys():
-        pos[0] = inst['Position']['Properties']['X'] 
-        pos[1] = inst['Position']['Properties']['Y'] 
-        pos[2] = inst['Position']['Properties']['Z']           
-    else:
-        pos[0] = inst['Position']['X'] 
-        pos[1] = inst['Position']['Y'] 
-        pos[2] = inst['Position']['Z'] 
+    if 'Position' in inst.keys():
+        if 'Properties' in inst['Position'].keys():
+            pos[0] = inst['Position']['Properties']['X'] 
+            pos[1] = inst['Position']['Properties']['Y'] 
+            pos[2] = inst['Position']['Properties']['Z']           
+        else:
+            pos[0] = inst['Position']['X'] 
+            pos[1] = inst['Position']['Y'] 
+            pos[2] = inst['Position']['Z'] 
+    elif 'position' in inst.keys():
+        pos[0] = inst['position']['X'] 
+        pos[1] = inst['position']['Y'] 
+        pos[2] = inst['position']['Z'] 
     return pos
 
 
 
-jsonpath = glob.glob(path+"\**\*1.streamingsector.json", recursive = True)
+jsonpath = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
 len(jsonpath)
 
 meshes=[]
@@ -153,22 +158,31 @@ print('done')
 
 start_time = time.time()
 
-
 def get_pos(inst):
     pos=[0,0,0]
-    if 'Properties' in inst['Position'].keys():
-        pos[0] = inst['Position']['Properties']['X'] /100
-        pos[1] = inst['Position']['Properties']['Y'] /100
-        pos[2] = inst['Position']['Properties']['Z'] /100          
-    else:
-        if 'X' in inst['Position'].keys():
-            pos[0] = inst['Position']['X'] /100
-            pos[1] = inst['Position']['Y'] /100
-            pos[2] = inst['Position']['Z'] /100
+    if 'Position' in inst.keys():
+        if 'Properties' in inst['Position'].keys():
+            pos[0] = inst['Position']['Properties']['X'] /100
+            pos[1] = inst['Position']['Properties']['Y'] /100
+            pos[2] = inst['Position']['Properties']['Z'] /100          
         else:
-            pos[0] = inst['Position']['x'] /100
-            pos[1] = inst['Position']['y'] /100
-            pos[2] = inst['Position']['z'] /100
+            if 'X' in inst['Position'].keys():
+                pos[0] = inst['Position']['X'] /100
+                pos[1] = inst['Position']['Y'] /100
+                pos[2] = inst['Position']['Z'] /100
+            else:
+                pos[0] = inst['Position']['x'] /100
+                pos[1] = inst['Position']['y'] /100
+                pos[2] = inst['Position']['z'] /100
+    elif 'position' in inst.keys():
+        if 'X' in inst['position'].keys():
+                pos[0] = inst['position']['X'] /100
+                pos[1] = inst['position']['Y'] /100
+                pos[2] = inst['position']['Z'] /100
+    elif 'translation' in inst.keys():
+        pos[0] = inst['translation']['X'] /100
+        pos[1] = inst['translation']['Y'] /100
+        pos[2] = inst['translation']['Z'] /100
     return pos
 
 def get_rot(inst):
@@ -184,23 +198,38 @@ def get_rot(inst):
             rot[1] = inst['Orientation']['i'] 
             rot[2] = inst['Orientation']['j'] 
             rot[3] = inst['Orientation']['k'] 
+    elif 'orientation' in inst.keys():
+            rot[0] = inst['orientation']['r'] 
+            rot[1] = inst['orientation']['i'] 
+            rot[2] = inst['orientation']['j'] 
+            rot[3] = inst['orientation']['k'] 
     elif 'Rotation' in inst.keys():
             rot[0] = inst['Rotation']['r'] 
             rot[1] = inst['Rotation']['i'] 
             rot[2] = inst['Rotation']['j'] 
             rot[3] = inst['Rotation']['k'] 
+    elif 'rotation' in inst.keys():
+            rot[0] = inst['rotation']['r'] 
+            rot[1] = inst['rotation']['i'] 
+            rot[2] = inst['rotation']['j'] 
+            rot[3] = inst['rotation']['k'] 
     return rot
 
 def get_scale(inst):
     scale=[0,0,0]
-    if 'Properties' in inst['Scale'].keys():
-        scale[0] = inst['Scale']['Properties']['X'] /100
-        scale[1] = inst['Scale']['Properties']['Y'] /100
-        scale[2] = inst['Scale']['Properties']['Z'] /100
-    else:
-        scale[0] = inst['Scale']['X'] /100
-        scale[1] = inst['Scale']['Y'] /100
-        scale[2] = inst['Scale']['Z'] /100
+    if 'Scale' in inst.keys():
+        if 'Properties' in inst['Scale'].keys():
+            scale[0] = inst['Scale']['Properties']['X'] /100
+            scale[1] = inst['Scale']['Properties']['Y'] /100
+            scale[2] = inst['Scale']['Properties']['Z'] /100
+        else:
+            scale[0] = inst['Scale']['X'] /100
+            scale[1] = inst['Scale']['Y'] /100
+            scale[2] = inst['Scale']['Z'] /100
+    elif 'scale' in inst.keys():
+        scale[0] = inst['scale']['X'] /100
+        scale[1] = inst['scale']['Y'] /100
+        scale[2] = inst['scale']['Z'] /100
     return scale
 
 
@@ -330,20 +359,12 @@ for filepath in jsonpath:
                                                 inst_trans = ref['Data']['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]       
                                             else :
                                                 print(e)
-                                            obj.location.x = inst_trans['translation']['X'] /100
-                                            obj.location.y = inst_trans['translation']['Y'] /100
-                                            obj.location.z = inst_trans['translation']['Z'] /100
+                                            obj.location = get_pos(inst_trans)                                         
+                                            obj.rotation_quaternion=get_rot(inst_trans)
+                                            obj.scale = get_scale(inst_trans)
                                             if obj.location.x == 0:
-                                                print('Mesh - ',meshname, ' - ',i,'HandleId - ', e['HandleId'])      
-                                            
-                                            obj.rotation_quaternion.x = inst_trans['rotation']['i']
-                                            obj.rotation_quaternion.y = inst_trans['rotation']['j']
-                                            obj.rotation_quaternion.z = inst_trans['rotation']['k']
-                                            obj.rotation_quaternion.w = inst_trans['rotation']['r']
-                                            
-                                            obj.scale.x = inst_trans['scale']['X'] /100
-                                            obj.scale.y = inst_trans['scale']['Y'] /100
-                                            obj.scale.z = inst_trans['scale']['Z'] /100
+                                                print('Location @ 0 for Mesh - ',meshname, ' - ',i,'HandleId - ', e['HandleId'])      
+
                                 else:
                                     print('Mesh not found - ',meshname, ' - ',i, e['HandleId'])
                                                 
@@ -513,11 +534,10 @@ for filepath in jsonpath:
                                                 print(e)
                                             
                                             inst_trans_rot=Quaternion((inst_trans['orientation']['r'],inst_trans['orientation']['i'], -inst_trans['orientation']['j'],-inst_trans['orientation']['k']))  
-                                            inst_trans_pos=Vector((inst_trans['position']['X'],inst_trans['position']['Y'],inst_trans['position']['Z']))
+                                            inst_trans_pos=Vector(get_pos_whole(inst_trans))
                                             inst_trans_scale=Vector((1,1,1))
-                                            
-                                            pos=get_pos(inst)
-                                            inst_pos =Vector((pos[0]*100,pos[1]*100,pos[2]*100))
+                                                                                        
+                                            inst_pos =Vector(get_pos_whole(inst))
                                             inst_rot =Quaternion(get_rot(inst))
                                             inst_scale =Vector((1,1,1))
                                             inst_trans_m=Matrix.LocRotScale(inst_trans_pos,inst_trans_rot,inst_trans_scale)
