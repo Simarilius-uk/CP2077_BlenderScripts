@@ -13,6 +13,15 @@ from pathlib import Path
 import time
 from pprint import pprint 
 
+
+# Enter the path to your projects source\raw\base folder below, needs double slashes between folder names.
+path = 'F:\\CPmod\\meshdecal_parralax\\source\\raw\\base'
+
+# If your importing to edit the sectors and want to add stuff then set the below to True and it will auto create the _new collectors
+am_modding=True
+
+
+
 C = bpy.context
 
 def get_pos_whole(inst):
@@ -28,8 +37,6 @@ def get_pos_whole(inst):
     return pos
 
 
-# Enter the path to your projects source\raw\base folder below, needs double slashes between folder names.
-path = 'F:\\CPmod\\meshdecal_parralax\\source\\raw\\base'
 
 jsonpath = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
 len(jsonpath)
@@ -203,13 +210,21 @@ for filepath in jsonpath:
           
     t=j['Data']['RootChunk']['nodeData']['Data']
     sectorName=os.path.basename(filepath)[:-5]
+
     if sectorName in coll_scene.children.keys():
         Sector_coll=bpy.data.collections.get(sectorName)
     else:
         Sector_coll=bpy.data.collections.new(sectorName)
         coll_scene.children.link(Sector_coll)       
+    Sector_coll['filepath']=filepath
+    
+    if am_modding==True:
+        if sectorName+'_new' in coll_scene.children.keys():
+            Sector_additions_coll=bpy.data.collections.get(sectorName+'_new')
+        else:
+            Sector_additions_coll=bpy.data.collections.new(sectorName+'_new')
+            coll_scene.children.link(Sector_additions_coll)       
 
-       
     meshes =  glob.glob(path+"\**\*.glb", recursive = True)
 
     glbnames = [ os.path.basename(x) for x in meshes]
@@ -478,17 +493,13 @@ for filepath in jsonpath:
                                             new['sectorName']=sectorName  
                                             new['pivot']=inst['Pivot']                     
                                             new['instance_idx']=idx
-                                            deltas=[0.0,0.0,0.0]
-                                            deltaRs=Quaternion()
+                                            
                                             if 'Data' in data['cookedInstanceTransforms']['sharedDataBuffer'].keys():
                                                 print(data['cookedInstanceTransforms'])
                                                 cookednum=data['cookedInstanceTransforms']['numElements']
                                                 
                                                 inst_trans=data['cookedInstanceTransforms']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]
-                                                deltas[0]=inst_trans['position']['Y']/100
-                                                deltas[1]=inst_trans['position']['X']/100
-                                                deltas[2]=inst_trans['position']['Z']/100
-                                                deltaRs=Quaternion((inst_trans['orientation']['r'],inst_trans['orientation']['i'], inst_trans['orientation']['j'],inst_trans['orientation']['k']))
+                                                
                                             elif 'HandleRefId' in data['cookedInstanceTransforms']['sharedDataBuffer'].keys():
                                                 bufferID = int(data['cookedInstanceTransforms']['sharedDataBuffer']['HandleRefId'])
                                                 new['bufferID']=bufferID
@@ -497,50 +508,35 @@ for filepath in jsonpath:
                                                     if n['HandleId']==str(bufferID-1):
                                                         ref=n
                                                 inst_trans = ref['Data']['cookedInstanceTransforms']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]   
-                                                deltas[0]=inst_trans['position']['X']/100
-                                                deltas[1]=inst_trans['position']['Y']/100
-                                                deltas[2]=inst_trans['position']['Z']/100
-                                                deltaRs=Quaternion((inst_trans['orientation']['r'],inst_trans['orientation']['i'], inst_trans['orientation']['j'],inst_trans['orientation']['k']))   
+                                                  
                                             else :
                                                 print(e)
+                                            
+                                            inst_trans_rot=Quaternion((inst_trans['orientation']['r'],inst_trans['orientation']['i'], -inst_trans['orientation']['j'],-inst_trans['orientation']['k']))  
+                                            inst_trans_pos=Vector((inst_trans['position']['X'],inst_trans['position']['Y'],inst_trans['position']['Z']))
+                                            inst_trans_scale=Vector((1,1,1))
+                                            
+                                            pos=get_pos(inst)
+                                            inst_pos =Vector((pos[0]*100,pos[1]*100,pos[2]*100))
+                                            inst_rot =Quaternion(get_rot(inst))
+                                            inst_scale =Vector((1,1,1))
+                                            inst_trans_m=Matrix.LocRotScale(inst_trans_pos,inst_trans_rot,inst_trans_scale)
+                                            inst_m=Matrix.LocRotScale(inst_pos,inst_rot,inst_scale)
+                                            tm= inst_m @ inst_trans_m
+                                            tm[0][3]=tm[0][3]*.01 
+                                            tm[1][3]=tm[1][3]*.01
+                                            tm[2][3]=tm[2][3]*.01
+                                            #print(tm)
+                                            #print(tm.translation)
 
                                             for old_obj in group.all_objects:                            
                                                 obj=old_obj.copy()  
                                                 new.objects.link(obj)   
-                                                                                          
-                                                obj.location.x= deltas[0]
-                                                obj.location.y= deltas[1] 
-                                                obj.location.z= deltas[2] 
-                                                obj.rotation_quaternion =  deltaRs
-                                                
-                                                ob = obj
-                                                mb = ob.matrix_basis
-                                                ob.data.transform(mb)
-                                                for c in ob.children:
-                                                    c.matrix_local = mb @ c.matrix_local
-                                                ob.matrix_basis.identity()
-                                                
-                                                pos=get_pos(inst)
-                                                new['pos']=pos
-                                                obj.location.x= obj.location.x+pos[0] 
-                                                obj.location.y= obj.location.y+pos[1] 
-                                                obj.location.z= obj.location.z+pos[2] 
-                                        
-                                                
-                                                rot=get_rot(inst)
-                                                rot_q = Quaternion((rot[0],rot[1],rot[2],rot[3]))
-                                                obj.rotation_quaternion = rot_q                                                    
-                                                
-                                                #print(pos,deltas,obj.location)
-                                                if obj.location.x == 0:
-                                                    print('Mesh - ',meshname, ' - ',i,'HandleId - ', e['HandleId'])      
-                                                
-                                               #print(i,obj.name,' x= ',obj.location.x, ' y= ', obj.location.y, ' z= ',obj.location.z)
-
-                                                obj.scale = get_scale(inst)
+                                                obj.matrix_local= tm   
+                                                obj.scale=get_scale(inst)
                                 else:
                                     print('Mesh not found - ',meshname, ' - ',i, e['HandleId'])
-            case 'xworldCollisionNode':
+            case 'worldCollisionNode':
                 print('worldCollisionNode',i)
                 sector_Collisions=sectorName+'_colls'
                 if sector_Collisions in coll_scene.children.keys():
@@ -569,7 +565,7 @@ for filepath in jsonpath:
                             bpy.ops.mesh.primitive_cube_add(size=.01, scale=(ssize['X'],ssize['Y'],ssize['Z']),location=loc)
                             cube=C.selected_objects[0]
                             sector_Collisions_coll.objects.link(cube)
-                            cube['node']=i
+                            cube['nodeIndex']=i
                             cube['ShapeType']=shape['ShapeType']
                             cube['ShapeNo']=s
                             cube['ActorIdx']=idx
@@ -587,7 +583,7 @@ for filepath in jsonpath:
                             bpy.ops.mesh.primitive_cylinder_add(radius=.005, depth=0.01, scale=(ssize['X'],ssize['Y'],ssize['Z']),location=loc)
                             capsule=C.selected_objects[0]
                             sector_Collisions_coll.objects.link(capsule)
-                            capsule['node']=i
+                            capsule['nodeIndex']=i
                             capsule['ShapeType']=shape['ShapeType']
                             capsule['ShapeNo']=s
                             capsule['ActorIdx']=idx
