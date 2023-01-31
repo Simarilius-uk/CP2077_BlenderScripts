@@ -3,9 +3,9 @@
 # By Simarilius Jan 2023
 # latest version available at https://github.com/Simarilius-uk/CP2077_BlenderScripts
 #
-#  __       __   ___  __   __                        __   ___  __  ___  __   __      ___  __    ___         __  
+#  __       __   ___  __   __  .  . .  . .   .       __   ___  __  ___  __   __      ___  __  . ___ . .  .  __  
 # /  ` \ / |__) |__  |__) |__) |  | |\ | |__/       /__` |__  /  `  |  /  \ |__)    |__  |  \ |  |  | |\ | / _` 
-# \__,  |  |__) |___ |  \ |    \__/ | \| |  \       .__/ |___ \__,  |  \__/ |  \    |___ |__/ |  |  | | \| \__> 
+# \__,  |  |__) |___ |  \ |    \__/ | \| |  \       .__/ |___ \__,  |  \__/ |  \    |___ |__/ |  |  | | \| \__/ 
 #                                                                                                              
 # Havent written a tutorial for this yet so thought I should add some instructions
 # 1) Import the sector you want to edit using the Import_and_instance_comb.py script from the github linked above.
@@ -83,7 +83,11 @@ def set_rot(inst,obj):
             inst['rotation']['i'] = float("{:.9g}".format(obj.rotation_quaternion[1] )) 
             inst['rotation']['j'] = float("{:.9g}".format(obj.rotation_quaternion[2] ))
             inst['rotation']['k'] = float("{:.9g}".format(obj.rotation_quaternion[3] ))
-
+    elif 'orientation' in inst.keys():
+            inst['orientation']['r'] = float("{:.9g}".format(obj.rotation_quaternion[0] ))
+            inst['orientation']['i'] = float("{:.9g}".format(obj.rotation_quaternion[1] )) 
+            inst['orientation']['j'] = float("{:.9g}".format(obj.rotation_quaternion[2] ))
+            inst['orientation']['k'] = float("{:.9g}".format(obj.rotation_quaternion[3] ))
 
 def set_scale(inst,obj):
     if 'Scale' in inst.keys():
@@ -148,13 +152,12 @@ def createNodeData(t, col, nodeIndex, obj, ID):
 
 
 jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
-bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(0,0,0))
+bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(-10000,-10000,-10000))
 neg_cube=C.selected_objects[0]
-neg_cube.scale=(-1,-1,-1)
 
- #       __               __      __  ___       ___  ___ 
+ # .  .  __ .    .. .  .  __      __  ___ .  .  ___  ___ 
  # |\/| /  \ \  / | |\ | / _`    /__`  |  |  | |__  |__  
- # |  | \__/  \/  | | \| \__>    .__/  |  \__/ |    |    
+ # |  | \__/  \/  | | \| \__/    .__/  |  \__/ |    |    
  #
                                                       
 for filepath in jsons:
@@ -165,7 +168,8 @@ for filepath in jsons:
     sectorName=os.path.basename(filepath)[:-5]
 
     Sector_coll=bpy.data.collections.get(sectorName)
-    Sector_coll['filepath']=filepath
+    if 'filepath' not in Sector_coll.keys():
+        Sector_coll['filepath']=filepath
     Sector_additions_coll=bpy.data.collections.get(sectorName+'_new')
     for i,e in enumerate(nodes):
         data = e['Data']
@@ -197,7 +201,7 @@ for filepath in jsons:
                                 set_scale(inst_trans,obj)
                             else:
                                 obj=neg_cube
-                                set_scale(inst_trans,obj)
+                                set_pos(inst_trans,obj)
             case 'worldStaticDecalNode':
                 #print('worldStaticDecalNode')
                 instances = [x for x in t if x['NodeIndex'] == i]
@@ -209,7 +213,7 @@ for filepath in jsons:
                         set_scale(inst,obj)
                     else:
                         obj=neg_cube
-                        set_scale(inst_trans,obj)
+                        set_pos(inst_trans,obj)
             case 'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode'| 'worldTerrainProxyMeshNode': 
                 if isinstance(e, dict) and 'mesh' in data.keys():
                     meshname = data['mesh']['DepotPath']
@@ -227,7 +231,7 @@ for filepath in jsons:
                                     set_scale(inst,obj)
                                 else:
                                     obj=neg_cube
-                                    set_scale(inst,obj)
+                                    set_pos(inst,obj)
             case 'worldInstancedDestructibleMeshNode':
                 #print('worldInstancedDestructibleMeshNode',i)
                 if isinstance(e, dict) and 'mesh' in data.keys():
@@ -246,7 +250,7 @@ for filepath in jsons:
                                     set_scale(inst,obj)
                                 else:
                                     obj=neg_cube
-                                    set_scale(inst,obj)
+                                    set_pos(inst,obj)
 
                                     
 #       __   __          __      __  ___       ___  ___ 
