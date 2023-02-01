@@ -22,7 +22,7 @@ import glob
 import os
 import bpy
 import copy
-from mathutils import Vector, Matrix
+from mathutils import Vector, Matrix, Quaternion
 C = bpy.context
 
 #Set this to your project directory
@@ -34,6 +34,62 @@ path = os.path.join(project,'source\\raw\\base')
 outpath = os.path.join(project,'output')
 
 
+def get_pos(inst):
+    pos=[0,0,0]
+    if 'Position' in inst.keys():
+        if 'Properties' in inst['Position'].keys():
+            pos[0] = inst['Position']['Properties']['X'] /100
+            pos[1] = inst['Position']['Properties']['Y'] /100
+            pos[2] = inst['Position']['Properties']['Z'] /100          
+        else:
+            if 'X' in inst['Position'].keys():
+                pos[0] = inst['Position']['X'] /100
+                pos[1] = inst['Position']['Y'] /100
+                pos[2] = inst['Position']['Z'] /100
+            else:
+                pos[0] = inst['Position']['x'] /100
+                pos[1] = inst['Position']['y'] /100
+                pos[2] = inst['Position']['z'] /100
+    elif 'position' in inst.keys():
+        if 'X' in inst['position'].keys():
+                pos[0] = inst['position']['X'] /100
+                pos[1] = inst['position']['Y'] /100
+                pos[2] = inst['position']['Z'] /100
+    elif 'translation' in inst.keys():
+        pos[0] = inst['translation']['X'] /100
+        pos[1] = inst['translation']['Y'] /100
+        pos[2] = inst['translation']['Z'] /100
+    return pos
+
+def get_rot(inst):
+    rot=[0,0,0,0]
+    if 'Orientation' in inst.keys():
+        if 'Properties' in inst['Orientation'].keys():
+            rot[0] = inst['Orientation']['Properties']['r']  
+            rot[1] = inst['Orientation']['Properties']['i'] 
+            rot[2] = inst['Orientation']['Properties']['j'] 
+            rot[3] = inst['Orientation']['Properties']['k']            
+        else:
+            rot[0] = inst['Orientation']['r'] 
+            rot[1] = inst['Orientation']['i'] 
+            rot[2] = inst['Orientation']['j'] 
+            rot[3] = inst['Orientation']['k'] 
+    elif 'orientation' in inst.keys():
+            rot[0] = inst['orientation']['r'] 
+            rot[1] = inst['orientation']['i'] 
+            rot[2] = inst['orientation']['j'] 
+            rot[3] = inst['orientation']['k'] 
+    elif 'Rotation' in inst.keys():
+            rot[0] = inst['Rotation']['r'] 
+            rot[1] = inst['Rotation']['i'] 
+            rot[2] = inst['Rotation']['j'] 
+            rot[3] = inst['Rotation']['k'] 
+    elif 'rotation' in inst.keys():
+            rot[0] = inst['rotation']['r'] 
+            rot[1] = inst['rotation']['i'] 
+            rot[2] = inst['rotation']['j'] 
+            rot[3] = inst['rotation']['k'] 
+    return rot
 
 def set_pos(inst,obj):  
     #print(inst)  
@@ -241,16 +297,49 @@ for filepath in jsons:
                     instances = [x for x in t if x['NodeIndex'] == i]
                     for inst in instances:
                         for idx in range(start, start+num):
+                            # Transforms are inside the cookedInstanceTransforms in a buffer
+                            if 'Data' in data['cookedInstanceTransforms']['sharedDataBuffer'].keys():
+                                inst_trans=data['cookedInstanceTransforms']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]
+
+                            # Transforms are in a shared buffer in another node, so get the reference and find the transform data                    
+                            elif 'HandleRefId' in data['cookedInstanceTransforms']['sharedDataBuffer'].keys():
+                                bufferID = int(data['cookedInstanceTransforms']['sharedDataBuffer']['HandleRefId'])
+                                ref=e
+                                for n in nodes:
+                                    if n['HandleId']==str(bufferID-1):
+                                        ref=n
+                                inst_trans = ref['Data']['cookedInstanceTransforms']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]   
+                                                  
+                            else :
+                                print(e)
+                            
+                            # the Transforms are stored as 2 parts, a basic transform applied to all the instances and individual ones per instance
+                            # lets get the basic one so we can calculate the instance one.
+                            inst_pos =Vector(get_pos(inst))
+                            inst_rot =Quaternion(get_rot(inst))
+                            inst_scale =Vector((1,1,1))
+                            inst_m=Matrix.LocRotScale(inst_pos,inst_rot,inst_scale)
+                            inst_m_inv=inst_m.inverted()
+
                             obj_col=find_col(i,idx,Sector_coll)
                             if obj_col:
                                 if len(obj_col.objects)>0:
                                     obj=obj_col.objects[0]
-                                    set_pos(inst,obj)
-                                    set_rot(inst,obj)
-                                    set_scale(inst,obj)
+                                    
+                                    inst_trans_m = inst_m_inv @ obj.matrix_local 
+                                    pos=inst_trans_m.translation
+                                    inst_trans['position']['X']=pos[0]*100
+                                    inst_trans['position']['Y']=pos[1]*100
+                                    inst_trans['position']['Z']=pos[2]*100
+                                    quat=inst_trans_m.to_quaternion()
+                                    inst_trans['orientation']['r']=-quat[0]
+                                    inst_trans['orientation']['i']=-quat[1]
+                                    inst_trans['orientation']['j']=-quat[2]
+                                    inst_trans['orientation']['k']=-quat[3]
                                 else:
-                                    obj=neg_cube
-                                    set_pos(inst,obj)
+                                    inst_trans['position']['X']=-10000
+                                    inst_trans['position']['Y']=-10000
+                                    inst_trans['position']['Z']=-10000
 
                                     
 #       __   __          __      __  ___       ___  ___ 
