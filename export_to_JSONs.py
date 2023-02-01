@@ -208,7 +208,7 @@ def createNodeData(t, col, nodeIndex, obj, ID):
 
 
 jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
-bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(-10000,-10000,-10000))
+bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(0,0,-1000))
 neg_cube=C.selected_objects[0]
 
  # .  .  __ .    .. .  .  __      __  ___ .  .  ___  ___ 
@@ -337,15 +337,16 @@ for filepath in jsons:
                                     inst_trans['orientation']['j']=-quat[2]
                                     inst_trans['orientation']['k']=-quat[3]
                                 else:
-                                    inst_trans['position']['X']=-10000
-                                    inst_trans['position']['Y']=-10000
-                                    inst_trans['position']['Z']=-10000
+                                    inst_trans['position']['X']=0
+                                    inst_trans['position']['Y']=0
+                                    inst_trans['position']['Z']=-3000
 
                                     
 #       __   __          __      __  ___       ___  ___ 
 #  /\  |  \ |  \ | |\ | / _`    /__`  |  |  | |__  |__  
 # /~~\ |__/ |__/ | | \| \__>    .__/  |  \__/ |    |    
-#                                                                                          
+#                       
+                                                                   
     ID=666
     for node in t:
         if node['Id']>ID:
@@ -405,7 +406,73 @@ for filepath in jsons:
                                             if wtb['startIndex']>start:
                                                 wtb['startIndex']=wtb['startIndex']+1
 
+                    case 'worldInstancedDestructibleMeshNode':
+                        obj=col.objects[0]
+                        nodeIndex=col['nodeIndex']
+                        base=nodes[nodeIndex]['Data']
+                        meshname = col['mesh']
+                        #print(base)
+                        num=base['cookedInstanceTransforms']['numElements']
+                        start=base['cookedInstanceTransforms']['startIndex']
+                        base['cookedInstanceTransforms']['numElements']=num+1
+                        print('start ',start,' num ',num)
+                        #Need to build the transform to go in the sharedDataBuffer
+                        trans= {"$type": "Transform","orientation": {"$type": "Quaternion","i": 0.0, "j": 0.0,"k": 0.0, "r": 1.0 },
+                          "position": {"$type": "Vector4","W": 0,  "X": 0.0,"Y": 0.0, "Z": 0.0 }}
                         
+                        
+                        instances = [x for x in t if x['NodeIndex'] == nodeIndex]
+                        inst=instances[0]
+                        
+                        inst_pos =Vector(get_pos(inst))
+                        inst_rot =Quaternion(get_rot(inst))
+                        inst_scale =Vector((1,1,1))
+                        inst_m=Matrix.LocRotScale(inst_pos,inst_rot,inst_scale)
+                        inst_m_inv=inst_m.inverted()
+                        inst_trans_m = inst_m_inv @ obj.matrix_local 
+                        pos=inst_trans_m.translation
+                        trans['position']['X']=pos[0]*100
+                        trans['position']['Y']=pos[1]*100
+                        trans['position']['Z']=pos[2]*100
+                        quat=inst_trans_m.to_quaternion()
+                        trans['orientation']['r']=-quat[0]
+                        trans['orientation']['i']=-quat[1]
+                        trans['orientation']['j']=-quat[2]
+                        trans['orientation']['k']=-quat[3]
+                        print(trans)
+                        
+                        if(meshname != 0):
+                            idx =start+num
+                            if 'Data' in base['cookedInstanceTransforms']['sharedDataBuffer'].keys():
+                                #if the transforms are in the nodeData itself we can just add to the end of it - WRONG
+                                wtbbuffer=base['cookedInstanceTransforms']['sharedDataBuffer']['Data']['buffer']['Data']
+                                bufferID = nodeIndex
+                                           
+                            elif 'HandleRefId' in base['cookedInstanceTransforms']['sharedDataBuffer'].keys():
+                                # transforms are in a shared buffer in another nodeData need to insert then update all the references to the shared buffer
+                                bufferID = int(base['cookedInstanceTransforms']['sharedDataBuffer']['HandleRefId'])
+                                ref=base
+                                for n in nodes:
+                                    if n['HandleId']==str(bufferID-1):
+                                        ref=n
+                                wtbbuffer=ref['Data']['cookedInstanceTransforms']['sharedDataBuffer']['Data']['buffer']['Data']
+                            print('Before = ',len(wtbbuffer['Transforms']))
+                            print('inserting at ',idx)
+                            wtbbuffer['Transforms'].insert(idx,trans)
+                            print('After = ',len(wtbbuffer['Transforms']))
+                            #Need to fix all the start pos for any instances after the node we're processing. What a ballache
+                            for i,e in enumerate(nodes):
+                                data = e['Data']
+                                type = data['$type']
+                                if type=='worldInstancedDestructibleMeshNode':
+                                    citb=data['cookedInstanceTransforms']
+                                    if 'HandleRefId' in citb['sharedDataBuffer'].keys()==bufferID:
+                                        if citb['startIndex']>start:
+                                            citb['startIndex']=citb['startIndex']+1
+
+                        
+                        
+                                                
                         
                         
                         
