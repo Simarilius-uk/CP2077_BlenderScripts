@@ -12,6 +12,7 @@
 # 2) You can move the existing objects around and this will be exported
 # 3) If you delete the mesh from a collector but leave the collector, the script will set the scale for that instance to -1 which stops it rendering in game
 # 4) to add new stuff create a new collector with the sector name with _new on the end ie interior_1_1_0_1.streamingsector_new and then copy any objects you want into it.
+#    You need to copy the collector and the meshes for the nodes you want to copy, not just the meshes, the tags that make it work are on the collectors.
 # 5) If its stuff already in the sector it will create nodeData nodes to instance it, if its from another imported sector it will copy the main node too
 #    Its assuming it can find the json for the sector its copying from in the project, dont be clever merging blends or whatever.
 # 6) not all nodetypes are supported yet, have a look at the case statements to see which are
@@ -346,7 +347,8 @@ for filepath in jsons:
 #  /\  |  \ |  \ | |\ | / _`    /__`  |  |  | |__  |__  
 # /~~\ |__/ |__/ | | \| \__>    .__/  |  \__/ |    |    
 #                       
-                                                                   
+    instances_to_copy=[]                                                               
+    destructibles_to_copy=[]
     ID=666
     for node in t:
         if node['Id']>ID:
@@ -381,8 +383,9 @@ for filepath in jsons:
                         if(meshname != 0):
                             idx =start+num
                             if 'Data' in base['worldTransformsBuffer']['sharedDataBuffer'].keys():
-                                #if the transforms are in the nodeData itself we can just add to the end of it
-                                base['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'].append(trans)
+                                #if the transforms are in the nodeData itself we can just add to the end of it - WRONG. it may be the shared one everything else is pointing to.
+                                base['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']
+                                bufferID = nodeIndex
                                            
                             elif 'HandleRefId' in base['worldTransformsBuffer']['sharedDataBuffer'].keys():
                                 # transforms are in a shared buffer in another nodeData need to insert then update all the references to the shared buffer
@@ -392,19 +395,19 @@ for filepath in jsons:
                                     if n['HandleId']==str(bufferID-1):
                                         ref=n
                                 wtbbuffer=ref['Data']['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']
-                                print('Before = ',len(wtbbuffer['Transforms']))
-                                print('inserting at ',idx)
-                                wtbbuffer['Transforms'].insert(idx,trans)
-                                print('After = ',len(wtbbuffer['Transforms']))
-                                #Need to fix all the start pos for any instances after the node we're processing. What a ballache
-                                for i,e in enumerate(nodes):
-                                    data = e['Data']
-                                    type = data['$type']
-                                    if type=='worldInstancedMeshNode':
-                                        wtb=data['worldTransformsBuffer']
-                                        if 'HandleRefId' in wtb['sharedDataBuffer'].keys()==bufferID:
-                                            if wtb['startIndex']>start:
-                                                wtb['startIndex']=wtb['startIndex']+1
+                            print('Before = ',len(wtbbuffer['Transforms']))
+                            print('inserting at ',idx)
+                            wtbbuffer['Transforms'].insert(idx,trans)
+                            print('After = ',len(wtbbuffer['Transforms']))
+                            #Need to fix all the start pos for any instances after the node we're processing. What a ballache
+                            for i,e in enumerate(nodes):
+                                data = e['Data']
+                                type = data['$type']
+                                if type=='worldInstancedMeshNode':
+                                    wtb=data['worldTransformsBuffer']
+                                    if 'HandleRefId' in wtb['sharedDataBuffer'].keys()==bufferID:
+                                        if wtb['startIndex']>start:
+                                            wtb['startIndex']=wtb['startIndex']+1
 
                     case 'worldInstancedDestructibleMeshNode':
                         obj=col.objects[0]
@@ -470,13 +473,14 @@ for filepath in jsons:
                                         if citb['startIndex']>start:
                                             citb['startIndex']=citb['startIndex']+1
 
-                        
-                        
-                                                
-                        
-                        
-                        
-                        
+#            
+#     ___       __    ___ __  _                     ____                              __  __                 _____           __                 
+#    /   | ____/ /___/ (_) /_(_)___  ____  _____   / __/________  ____ ___     ____  / /_/ /_  ___  _____   / ___/___  _____/ /_____  __________
+#   / /| |/ __  / __  / / __/ / __ \/ __ \/ ___/  / /_/ ___/ __ \/ __ `__ \   / __ \/ __/ __ \/ _ \/ ___/   \__ \/ _ \/ ___/ __/ __ \/ ___/ ___/
+#  / ___ / /_/ / /_/ / / /_/ / /_/ / / / (__  )  / __/ /  / /_/ / / / / / /  / /_/ / /_/ / / /  __/ /      ___/ /  __/ /__/ /_/ /_/ / /  (__  ) 
+# /_/  |_\__,_/\__,_/_/\__/_/\____/_/ /_/____/  /_/ /_/   \____/_/ /_/ /_/   \____/\__/_/ /_/\___/_/      /____/\___/\___/\__/\____/_/  /____/  
+#                                                                                                                                              
+#  Nodes from other sectors that have been imported           
                         
             elif 'nodeIndex' in col.keys() and col['sectorName'] in bpy.data.collections.keys() and len(col.objects)>0:
                 match col['nodeType']:
@@ -497,10 +501,44 @@ for filepath in jsons:
                         obj=col.objects[0]
                         createNodeData(t, col, new_Index, obj,ID)
                         ID+=1
-
+                    
+                    # make a list of all the instances, we'll copy the main node once and instance them
+                    case 'worldInstancedMeshNode':
+                        if [col['nodeIndex'],col['sectorName']] not in instances_to_copy
+                            instances_to_copy.append([col['nodeIndex'],col['sectorName']])
+                    
+                    case 'worldInstancedDestructibleMeshNode':
+                        if [col['nodeIndex'],col['sectorName']] not in destructibles_to_copy:
+                            destructibles_to_copy.append([col['nodeIndex'],col['sectorName']])
     
+    print(instances_to_copy)
+    print(destructibles_to_copy)
+'''
+    for node in instances_to_copy:
+        ni=node[0]
+        source_sector=node[1]
+        source_sect_coll=bpy.data.collections.get(source_sector)
+        source_sect_json_path=source_sect_coll['filepath']
+        print(source_sect_json_path)
+        with open(source_sect_json_path,'r') as f: 
+            source_sect_json=json.load(f) 
+        source_nodes = source_sect_json["Data"]["RootChunk"]["nodes"]
+        nodes.append(copy.deepcopy(source_nodes[ni]))
+        new_Index=len(nodes)-1
+        new_node=nodes[new_Index]
+        new_node['worldTransformsBuffer']['numElements']=0
+        #need to find a wtsb to point to
+        new_node['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
+        inst_col=[]
+        for col in Sector_additions_coll.children:
+            if col['nodeIndex']==ni and col['sectorName']==source_sector:
+                inst_col.append(col.name)
+        for colname in inst_col:
+            col=Sector_additions_coll.children.colname
+            obj=col.objects[0]
+            new_node['worldTransformsBuffer']['numElements']+=1
+'''
     # Export the modified json
-
     pathout=os.path.join(outpath,os.path.basename(filepath))
     with open(pathout, 'w') as outfile:
         json.dump(j, outfile,indent=2)
