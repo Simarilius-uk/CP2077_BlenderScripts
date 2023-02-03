@@ -226,7 +226,7 @@ if 'neg_cube' not in Masters.objects.keys():
                                                       
 for filepath in jsons:
     with open(filepath,'r') as f: 
-          j=json.load(f) 
+        j=json.load(f) 
     nodes = j["Data"]["RootChunk"]["nodes"]
     t=j['Data']['RootChunk']['nodeData']['Data']
     sectorName=os.path.basename(filepath)[:-5]
@@ -541,6 +541,14 @@ for filepath in jsons:
         nodes.append(copy.deepcopy(source_nodes[ni]))
         new_Index=len(nodes)-1
         new_node=nodes[new_Index]
+        prev_node=nodes[new_Index-1]
+        if 'cookedInstanceTransforms' in prev_node.keys() or 'worldTransformsBuffer' in prev_node.keys():
+            if 'cookedInstanceTransforms' in prev_node.keys() and 'HandleId' in prev_node['cookedInstanceTransforms']:
+                new_node['HandleId']=str(int(nodes[new_Index-1]['cookedInstanceTransforms']['HandleId'])+1)
+            if 'worldTransformsBuffer' in prev_node.keys() and 'HandleId' in prev_node['worldTransformsBuffer']:
+                new_node['HandleId']=str(int(nodes[new_Index-1]['worldTransformsBuffer']['HandleId'])+1)
+        else:
+            new_node['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
         print("New Node: ")
         print(new_node)
         #need the new nodeData node pointing to it.
@@ -597,7 +605,7 @@ for filepath in jsons:
             print('inserting at ',idx)
             wtbbuffer['Transforms'].insert(idx,trans)
             print('After = ',len(wtbbuffer['Transforms']))
-'''            
+            
     for node in destructibles_to_copy:
         ni=node[0]
         source_sector=node[1]
@@ -610,7 +618,14 @@ for filepath in jsons:
         nodes.append(copy.deepcopy(source_nodes[ni]))
         new_Index=len(nodes)-1
         new_node=nodes[new_Index]
-        new_node['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
+        prev_node=nodes[new_Index-1]
+        if 'cookedInstanceTransforms' in prev_node.keys() or 'worldTransformsBuffer' in prev_node.keys():
+            if 'cookedInstanceTransforms' in prev_node.keys() and 'HandleId' in prev_node['cookedInstanceTransforms']:
+                new_node['HandleId']=str(int(nodes[new_Index-1]['cookedInstanceTransforms']['HandleId'])+1)
+            if 'worldTransformsBuffer' in prev_node.keys() and 'HandleId' in prev_node['worldTransformsBuffer']:
+                new_node['HandleId']=str(int(nodes[new_Index-1]['worldTransformsBuffer']['HandleId'])+1)
+        else:
+            new_node['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
         print("New Node: ")
         print(new_node)
         #need the new nodeData node pointing to it.
@@ -618,8 +633,19 @@ for filepath in jsons:
         inst=instances[0]
         t.append(copy.deepcopy(inst))
         new_nd_node=t[len(t)-1]
-        new_nd_node['NodeIndex']=new_node['HandleId']
+        new_nd_node['NodeIndex']=new_Index
+        new_nd_node['Position']['X']=0
+        new_nd_node['Position']['Y']=0
+        new_nd_node['Position']['Z']=0
+        new_nd_node['Orientation']['r']=0
+        new_nd_node['Orientation']['i']=0
+        new_nd_node['Orientation']['j']=0
+        new_nd_node['Orientation']['k']=0
+        new_nd_node['Scale']['X']=1
+        new_nd_node['Scale']['Y']=1
+        new_nd_node['Scale']['Z']=1
         
+        maxHid=new_node['HandleId']
         print("New nodeData Node: ")
         print(new_nd_node)
         bufferID=-99
@@ -633,29 +659,33 @@ for filepath in jsons:
             bufferID = Sector_additions_coll['Dest_bufferID']
             if 'Data' in new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer'].keys():
                 new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer'].pop('Data')
+            if 'HandleId' in new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer'].keys():
+                new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer'].pop('HandleId')
         else:
             # the sector has no other instanced meshes already in it, so no wtb to point to. Need to create one in the wtb data
             # have absolutely no idea what the flags is here.
             print('No shared buffer found.')
             newbuf={ "BufferId": str(new_Index+1), "Flags": 4063232,"Type": "WolvenKit.RED4.Archive.Buffer.WorldTransformsBuffer, WolvenKit.RED4.Archive, Version=1.61.0.0, Culture=neutral, PublicKeyToken=null", "Data": { "Transforms": []} } 
-            new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer']['Data']= {"$type": "worldSharedDataBuffer", "buffer": newbuf}
+            new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer']['Data']= { "Data": {"$type": "worldSharedDataBuffer", "buffer": newbuf}}
             print(new_node)
-            
+            new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer']['HandleId']=maxHid+1
+            maxHid+=1
             new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer'].pop('HandleRefId')
-            bufferID = str(int(new_node['HandleId'])+1)
+            bufferID = new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer']['HandleId']
             print(new_node['Data']['cookedInstanceTransforms'])
             Sector_additions_coll['Dest_bufferID']=bufferID
         
         print('bufferID - ',bufferID)
         ref=new_node
         for n in nodes:
-            if n['HandleId']==int(bufferID)-1:
+            if int(n['HandleId'])==int(bufferID)-1:
                 ref=n
         print(ref['Data']['cookedInstanceTransforms']['sharedDataBuffer'])
         wtbbuffer=ref['Data']['cookedInstanceTransforms']['sharedDataBuffer']['Data']['buffer']['Data']
         new_node['Data']['cookedInstanceTransforms']['startIndex']=len(wtbbuffer['Transforms'])
-
-        new_node['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
+        if 'HandleId' in new_node['Data']['filterData'].keys():
+                new_node['Data']['filterData']['HandleId']=str(int(maxHid)+1)
+        
         inst_col=[]
         for col in Sector_additions_coll.children:
             if col['nodeIndex']==ni and col['sectorName']==source_sector:
@@ -675,7 +705,7 @@ for filepath in jsons:
             print('inserting at ',idx)
             wtbbuffer['Transforms'].insert(idx,trans)
             print('After = ',len(wtbbuffer['Transforms']))            
-'''            
+          
             
     # Export the modified json
     pathout=os.path.join(outpath,os.path.basename(filepath))
