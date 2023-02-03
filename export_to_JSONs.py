@@ -209,8 +209,15 @@ def createNodeData(t, col, nodeIndex, obj, ID):
 
 
 jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
-bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(0,0,-1000))
-neg_cube=C.selected_objects[0]
+
+Masters=bpy.data.collections.get("MasterInstances")
+
+if 'neg_cube' not in Masters.objects.keys():
+    bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(0,0,-1000))
+    neg_cube=C.selected_objects[0]
+    neg_cube.name='neg_cube'
+    neg_cube.users_collection[0].objects.unlink(neg_cube)
+    Masters.objects.link(neg_cube) 
 
  # .  .  __ .    .. .  .  __      __  ___ .  .  ___  ___ 
  # |\/| /  \ \  / | |\ | / _`    /__`  |  |  | |__  |__  
@@ -238,7 +245,7 @@ for filepath in jsons:
                 start=data['worldTransformsBuffer']['startIndex']
                 if(meshname != 0):
                     for idx in range(start, start+num):
-                        
+                        bufferID=0
                         if 'Data' in data['worldTransformsBuffer']['sharedDataBuffer'].keys():
                                 inst_trans=data['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]
                                        
@@ -249,6 +256,9 @@ for filepath in jsons:
                                 if n['HandleId']==str(bufferID-1):
                                     ref=n
                             inst_trans = ref['Data']['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]
+                    # store the bufferID for when we add new stuff.
+                        if Sector_additions_coll:
+                            Sector_additions_coll['Inst_bufferID']=bufferID
                         obj_col=find_col(i,idx,Sector_coll)    
                         if obj_col:
                             if len(obj_col.objects)>0:
@@ -298,6 +308,7 @@ for filepath in jsons:
                     instances = [x for x in t if x['NodeIndex'] == i]
                     for inst in instances:
                         for idx in range(start, start+num):
+                            bufferID=0
                             # Transforms are inside the cookedInstanceTransforms in a buffer
                             if 'Data' in data['cookedInstanceTransforms']['sharedDataBuffer'].keys():
                                 inst_trans=data['cookedInstanceTransforms']['sharedDataBuffer']['Data']['buffer']['Data']['Transforms'][idx]
@@ -313,7 +324,11 @@ for filepath in jsons:
                                                   
                             else :
                                 print(e)
-                            
+                            # store the bufferID for when we add new stuff.
+                            if Sector_additions_coll:
+                                Sector_additions_coll['Dest_bufferID']=bufferID
+                                print('Setting Dest_bufferID to ',bufferID)
+
                             # the Transforms are stored as 2 parts, a basic transform applied to all the instances and individual ones per instance
                             # lets get the basic one so we can calculate the instance one.
                             inst_pos =Vector(get_pos(inst))
@@ -504,7 +519,7 @@ for filepath in jsons:
                     
                     # make a list of all the instances, we'll copy the main node once and instance them
                     case 'worldInstancedMeshNode':
-                        if [col['nodeIndex'],col['sectorName']] not in instances_to_copy
+                        if [col['nodeIndex'],col['sectorName']] not in instances_to_copy:
                             instances_to_copy.append([col['nodeIndex'],col['sectorName']])
                     
                     case 'worldInstancedDestructibleMeshNode':
@@ -513,7 +528,7 @@ for filepath in jsons:
     
     print(instances_to_copy)
     print(destructibles_to_copy)
-'''
+
     for node in instances_to_copy:
         ni=node[0]
         source_sector=node[1]
@@ -526,18 +541,142 @@ for filepath in jsons:
         nodes.append(copy.deepcopy(source_nodes[ni]))
         new_Index=len(nodes)-1
         new_node=nodes[new_Index]
-        new_node['worldTransformsBuffer']['numElements']=0
-        #need to find a wtsb to point to
+        print("New Node: ")
+        print(new_node)
+        #need the new nodeData node pointing to it.
+        instances = [x for x in source_sect_json['Data']['RootChunk']['nodeData']['Data'] if x['NodeIndex'] == ni]
+        inst=instances[0]
+        t.append(copy.deepcopy(inst))
+        new_nd_node=t[len(t)-1]
+        new_nd_node['NodeIndex']=new_Index
+        print("New nodeData Node: ")
+        print(new_nd_node)
+        bufferID=0
+        new_node['Data']['worldTransformsBuffer']['numElements']=0
+        # Hopefully we can add the instances to the end of the buffer we saved earlier.
+        print("Sector_additions_coll['Inst_bufferID'] = ",Sector_additions_coll['Inst_bufferID'])
+        if Sector_additions_coll['Inst_bufferID']>0:
+            new_node['Data']['worldTransformsBuffer']['sharedDataBuffer']['HandleRefId']=str(Sector_additions_coll['Inst_bufferID'])
+            bufferID = Sector_additions_coll['Inst_bufferID']
+            if 'Data' in new_node['Data']['worldTransformsBuffer']['sharedDataBuffer'].keys():
+                new_node['Data']['worldTransformsBuffer']['sharedDataBuffer'].pop('Data')
+        else:
+            # the sector has no other instanced meshes already in it, so no wtb to point to. Need to create one in the wtb data
+            # have absolutely no idea what the flags is here.
+            newbuf={ "BufferId": str(new_Index+1), "Flags": 4063232,"Type": "WolvenKit.RED4.Archive.Buffer.WorldTransformsBuffer, WolvenKit.RED4.Archive, Version=1.61.0.0, Culture=neutral, PublicKeyToken=null", "Data": { "Transforms": []} } 
+            new_node['Data']['worldTransformsBuffer']['sharedDataBuffer']['Data']={ "Data": {"$type": "worldSharedDataBuffer", "buffer": newbuf}}
+
+            bufferID = new_node['Data']['worldTransformsBuffer']['sharedDataBuffer']['Data']['Data']['BufferID']
+            Sector_additions_coll['Inst_bufferID']=bufferID
+        
+        print('bufferID - ',bufferID)
+        ref=new_nd_node
+        for n in nodes:
+            if n['HandleId']==str(bufferID-1):
+                ref=n
+        wtbbuffer=ref['Data']['worldTransformsBuffer']['sharedDataBuffer']['Data']['buffer']['Data']
+        new_node['Data']['worldTransformsBuffer']['startIndex']=len(wtbbuffer['Transforms'])
+
         new_node['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
         inst_col=[]
         for col in Sector_additions_coll.children:
             if col['nodeIndex']==ni and col['sectorName']==source_sector:
                 inst_col.append(col.name)
         for colname in inst_col:
-            col=Sector_additions_coll.children.colname
+            col=Sector_additions_coll.children.get(colname)
             obj=col.objects[0]
-            new_node['worldTransformsBuffer']['numElements']+=1
-'''
+            new_node['Data']['worldTransformsBuffer']['numElements']+=1
+            trans= {"$type": "worldNodeTransform","rotation": {"$type": "Quaternion","i": 0.0, "j": 0.0,"k": 0.0, "r": 1.0 },
+                          "translation": {"$type": "Vector3",  "X": 0.0,"Y": 0.0, "Z": 0.0 },'scale': {'$type': 'Vector3', 'X': 1.0, 'Y': 1.0, 'Z': 1.0} }
+            set_pos(trans,obj)
+            set_rot(trans,obj)
+            set_scale(trans,obj)
+            idx=len(wtbbuffer['Transforms'])
+            print(trans)
+            print('Before = ',len(wtbbuffer['Transforms']))
+            print('inserting at ',idx)
+            wtbbuffer['Transforms'].insert(idx,trans)
+            print('After = ',len(wtbbuffer['Transforms']))
+'''            
+    for node in destructibles_to_copy:
+        ni=node[0]
+        source_sector=node[1]
+        source_sect_coll=bpy.data.collections.get(source_sector)
+        source_sect_json_path=source_sect_coll['filepath']
+        print(source_sect_json_path)
+        with open(source_sect_json_path,'r') as f: 
+            source_sect_json=json.load(f) 
+        source_nodes = source_sect_json["Data"]["RootChunk"]["nodes"]
+        nodes.append(copy.deepcopy(source_nodes[ni]))
+        new_Index=len(nodes)-1
+        new_node=nodes[new_Index]
+        new_node['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
+        print("New Node: ")
+        print(new_node)
+        #need the new nodeData node pointing to it.
+        instances = [x for x in source_sect_json['Data']['RootChunk']['nodeData']['Data'] if x['NodeIndex'] == ni]
+        inst=instances[0]
+        t.append(copy.deepcopy(inst))
+        new_nd_node=t[len(t)-1]
+        new_nd_node['NodeIndex']=new_node['HandleId']
+        
+        print("New nodeData Node: ")
+        print(new_nd_node)
+        bufferID=-99
+        new_node['Data']['cookedInstanceTransforms']['numElements']=0
+        # Hopefully we can add the instances to the end of the buffer we saved earlier.
+        #print("Sector_additions_coll['Dest_bufferID'] = ",Sector_additions_coll['Dest_bufferID'])
+        if 'Dest_bufferID' in Sector_additions_coll.keys() and int(Sector_additions_coll['Dest_bufferID'])>-1:
+            
+            print('  Found a shared buffer ',Sector_additions_coll['Dest_bufferID'])
+            new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer']['HandleRefId']=str(Sector_additions_coll['Dest_bufferID'])
+            bufferID = Sector_additions_coll['Dest_bufferID']
+            if 'Data' in new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer'].keys():
+                new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer'].pop('Data')
+        else:
+            # the sector has no other instanced meshes already in it, so no wtb to point to. Need to create one in the wtb data
+            # have absolutely no idea what the flags is here.
+            print('No shared buffer found.')
+            newbuf={ "BufferId": str(new_Index+1), "Flags": 4063232,"Type": "WolvenKit.RED4.Archive.Buffer.WorldTransformsBuffer, WolvenKit.RED4.Archive, Version=1.61.0.0, Culture=neutral, PublicKeyToken=null", "Data": { "Transforms": []} } 
+            new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer']['Data']= {"$type": "worldSharedDataBuffer", "buffer": newbuf}
+            print(new_node)
+            
+            new_node['Data']['cookedInstanceTransforms']['sharedDataBuffer'].pop('HandleRefId')
+            bufferID = str(int(new_node['HandleId'])+1)
+            print(new_node['Data']['cookedInstanceTransforms'])
+            Sector_additions_coll['Dest_bufferID']=bufferID
+        
+        print('bufferID - ',bufferID)
+        ref=new_node
+        for n in nodes:
+            if n['HandleId']==int(bufferID)-1:
+                ref=n
+        print(ref['Data']['cookedInstanceTransforms']['sharedDataBuffer'])
+        wtbbuffer=ref['Data']['cookedInstanceTransforms']['sharedDataBuffer']['Data']['buffer']['Data']
+        new_node['Data']['cookedInstanceTransforms']['startIndex']=len(wtbbuffer['Transforms'])
+
+        new_node['HandleId']=str(int(nodes[new_Index-1]['HandleId'])+1)
+        inst_col=[]
+        for col in Sector_additions_coll.children:
+            if col['nodeIndex']==ni and col['sectorName']==source_sector:
+                inst_col.append(col.name)
+        for colname in inst_col:
+            col=Sector_additions_coll.children.get(colname)
+            obj=col.objects[0]
+            new_node['Data']['cookedInstanceTransforms']['numElements']+=1
+            trans= {"$type": "Transform","orientation": {"$type": "Quaternion","i": 0.0, "j": 0.0,"k": 0.0, "r": 1.0 },
+                          "position": {"$type": "Vector4","W": 0,  "X": 0.0,"Y": 0.0, "Z": 0.0 }}
+            set_pos(trans,obj)
+            set_rot(trans,obj)
+            set_scale(trans,obj)
+            idx=len(wtbbuffer['Transforms'])
+            print(trans)
+            print('Before = ',len(wtbbuffer['Transforms']))
+            print('inserting at ',idx)
+            wtbbuffer['Transforms'].insert(idx,trans)
+            print('After = ',len(wtbbuffer['Transforms']))            
+'''            
+            
     # Export the modified json
     pathout=os.path.join(outpath,os.path.basename(filepath))
     with open(pathout, 'w') as outfile:
