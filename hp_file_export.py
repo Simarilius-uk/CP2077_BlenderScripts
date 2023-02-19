@@ -6,16 +6,25 @@
 #  for instance mine was set to F:\MaterialDepot\base\characters\common\hair\textures\hair_profiles\blue_sapphire.hp.json
 #  it will create/overwrite the json for this hp file within the project folder specified.
 #  prints the stop info to the System Console window too.
-
+import math 
 import bpy
 import os
 import json
 from bpy import context as C
 
+def to_gam(c):
+     if c < 0.0031308:
+         srgb = 0.0 if c < 0.0 else c * 12.92
+     else:
+         srgb = 1.055 * math.pow(c, 1.0 / 2.4) - 0.055
+     return max(min(int(srgb * 255 + 0.5), 255), 0)
+
+
+
 D = bpy.data
 
 # Input the slot number of the material here ( its -1 from the number shown in the top of the node editor helpfully
-Slot_no=4
+Slot_no=0
 
 # path of the raw folder of the project to save the hp to.
 project_path = 'F:\\CPMod\\IslandDancer\\source\\raw'
@@ -50,14 +59,19 @@ for crname in crs:
     for i,stop in enumerate(cr.color_ramp.elements):
         print('Stop # ',i)
         print('Position - ',stop.position)
-        print('Color - ',int(stop.color[0]*255),int(stop.color[1]*255),int(stop.color[2]*255))
+        print('Color - ',int(to_gam(stop.color[0])),int(to_gam(stop.color[1])),int(to_gam(stop.color[2])))
         print(' ')
-        j['Data']['RootChunk'][grad][i]['color']['Red'] = int(stop.color[0]*255)
-        j['Data']['RootChunk'][grad][i]['color']['Green'] = int(stop.color[1]*255)
-        j['Data']['RootChunk'][grad][i]['color']['Blue'] =int(stop.color[2]*255)
-        j['Data']['RootChunk'][grad][i]['color']['Alpha'] =int(stop.color[3]*255)
-        j['Data']['RootChunk'][grad][i]['value']=stop.position
-
+        if i<len(j['Data']['RootChunk'][grad]):
+            j['Data']['RootChunk'][grad][i]['color']['Red'] = int(to_gam(stop.color[0]))
+            j['Data']['RootChunk'][grad][i]['color']['Green'] = int(to_gam(stop.color[1]))
+            j['Data']['RootChunk'][grad][i]['color']['Blue'] =int(to_gam(stop.color[2]))
+            j['Data']['RootChunk'][grad][i]['color']['Alpha'] =int(stop.color[3]*255)
+            j['Data']['RootChunk'][grad][i]['value']=stop.position
+        else:
+            new_col={'Red':int(to_gam(stop.color[0])),'Green':int(to_gam(stop.color[1])),'Blue':int(to_gam(stop.color[2])),'Alpha':int(stop.color[3]*255)}
+            new_stop={'color':new_col, 'value':stop.position}
+            j['Data']['RootChunk'][grad].append(new_stop)
+            
 outpath = os.path.join(project_path,hp[hp.index('base'):])
 
 
