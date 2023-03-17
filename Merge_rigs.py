@@ -2,7 +2,9 @@ import bpy
 C = bpy.context
 D = bpy.data
 
-###################################################### CHANGE THIS ######################################################
+##################################################### TARGET NAMES ######################################################
+
+# Change EITHER the strings below OR rename your armatures in the viewport to "HeadArmature" and "BodyArmature"
 
 sourceArmature = 'HeadArmature'
 targetArmature = 'BodyArmature'
