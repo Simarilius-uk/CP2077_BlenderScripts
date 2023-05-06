@@ -211,13 +211,15 @@ def createNodeData(t, col, nodeIndex, obj, ID):
 jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
 
 Masters=bpy.data.collections.get("MasterInstances")
-
+neg_cube=''
 if 'neg_cube' not in Masters.objects.keys():
     bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(0,0,-1000))
     neg_cube=C.selected_objects[0]
     neg_cube.name='neg_cube'
     neg_cube.users_collection[0].objects.unlink(neg_cube)
     Masters.objects.link(neg_cube) 
+else:
+    neg_cube=Masters.objects["neg_cube"]
 
  # .  .  __ .    .. .  .  __      __  ___ .  .  ___  ___ 
  # |\/| /  \ \  / | |\ | / _`    /__`  |  |  | |__  |__  
