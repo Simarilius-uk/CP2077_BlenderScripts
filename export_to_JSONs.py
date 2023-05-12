@@ -184,7 +184,7 @@ def find_decal(NodeIndex,Inst_idx,Sector_coll):
     #print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
     col=[x for x in Sector_coll.objects if x['nodeIndex']==NodeIndex]
     if len(col)==0:
-        return none
+        return None
     elif len(col)==1:
         return col[0]
     else: 
@@ -270,7 +270,7 @@ for filepath in jsons:
                                 set_scale(inst_trans,obj)
                             else:
                                 obj=neg_cube
-                                set_pos(inst_trans,obj)
+                                set_pos(inst,obj)
             case 'worldStaticDecalNode':
                 #print('worldStaticDecalNode')
                 instances = [x for x in t if x['NodeIndex'] == i]
