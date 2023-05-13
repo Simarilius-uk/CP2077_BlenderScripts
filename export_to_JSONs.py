@@ -27,7 +27,7 @@ from mathutils import Vector, Matrix, Quaternion
 C = bpy.context
 
 #Set this to your project directory
-project = 'F:\\CPmod\\meshdecal_parralax'
+project = 'F:\\CPmod\\mana'
 path = os.path.join(project,'source\\raw\\base')
 
 #its currently set to output the modified jsons to an output folder in the project dir (create one before running)
@@ -184,7 +184,7 @@ def find_decal(NodeIndex,Inst_idx,Sector_coll):
     #print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
     col=[x for x in Sector_coll.objects if x['nodeIndex']==NodeIndex]
     if len(col)==0:
-        return none
+        return None
     elif len(col)==1:
         return col[0]
     else: 
@@ -212,12 +212,15 @@ jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
 
 Masters=bpy.data.collections.get("MasterInstances")
 
+neg_cube=None
 if 'neg_cube' not in Masters.objects.keys():
-    bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(0,0,-1000))
+    bpy.ops.mesh.primitive_cube_add(size=.01, scale=(-1,-1,-1),location=(0,0,-10))
     neg_cube=C.selected_objects[0]
     neg_cube.name='neg_cube'
     neg_cube.users_collection[0].objects.unlink(neg_cube)
     Masters.objects.link(neg_cube) 
+else:
+    neg_cube=Masters.objects["neg_cube"]
 
  # .  .  __ .    .. .  .  __      __  ___ .  .  ___  ___ 
  # |\/| /  \ \  / | |\ | / _`    /__`  |  |  | |__  |__  
@@ -230,7 +233,9 @@ for filepath in jsons:
     nodes = j["Data"]["RootChunk"]["nodes"]
     t=j['Data']['RootChunk']['nodeData']['Data']
     sectorName=os.path.basename(filepath)[:-5]
-
+    if sectorName not in bpy.data.collections.keys():
+        break
+    print('Updating sector ',sectorName)
     Sector_coll=bpy.data.collections.get(sectorName)
     if 'filepath' not in Sector_coll.keys():
         Sector_coll['filepath']=filepath
@@ -260,7 +265,7 @@ for filepath in jsons:
                         if Sector_additions_coll:
                             Sector_additions_coll['Inst_bufferID']=bufferID
                         obj_col=find_col(i,idx,Sector_coll)    
-                        if obj_col:
+                        if obj_col and inst_trans:
                             if len(obj_col.objects)>0:
                                 obj=obj_col.objects[0]
                                 set_pos(inst_trans,obj)
@@ -280,8 +285,8 @@ for filepath in jsons:
                         set_scale(inst,obj)
                     else:
                         obj=neg_cube
-                        set_pos(inst_trans,obj)
-            case 'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode'| 'worldTerrainProxyMeshNode': 
+                        set_pos(inst,obj)
+            case   'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode'| 'worldTerrainProxyMeshNode': 
                 if isinstance(e, dict) and 'mesh' in data.keys():
                     meshname = data['mesh']['DepotPath']
                     #print('Mesh name is - ',meshname, e['HandleId'])
@@ -299,6 +304,27 @@ for filepath in jsons:
                                 else:
                                     obj=neg_cube
                                     set_pos(inst,obj)
+            case  'worldEntityNode':
+                if isinstance(e, dict) and 'entityTemplate' in data.keys():
+                    entname = data['entityTemplate']['DepotPath']
+                    
+                    if(entname != 0):
+                        instances = [x for x in t if x['NodeIndex'] == i]
+                        for idx,inst in enumerate(instances):
+                            obj_col=find_col(i,idx,Sector_coll)
+                            #print(obj_col)
+                            if obj_col:
+                                if len(obj_col.objects)>0:
+                                    obj=obj_col.objects[0]
+                                    set_pos(inst,obj)
+                                    set_rot(inst,obj)
+                                    set_scale(inst,obj)
+                                else:
+                                    obj=neg_cube
+                                    set_pos(inst,obj)                                    
+                                    
+                                    
+                                    
             case 'worldInstancedDestructibleMeshNode':
                 #print('worldInstancedDestructibleMeshNode',i)
                 if isinstance(e, dict) and 'mesh' in data.keys():
@@ -355,7 +381,7 @@ for filepath in jsons:
                                 else:
                                     inst_trans['position']['X']=0
                                     inst_trans['position']['Y']=0
-                                    inst_trans['position']['Z']=-3000
+                                    inst_trans['position']['Z']=-30
 
                                     
 #       __   __          __      __  ___       ___  ___ 
@@ -372,11 +398,17 @@ for filepath in jsons:
         for col in Sector_additions_coll.children:
             if 'nodeIndex' in col.keys() and col['sectorName']==sectorName and len(col.objects)>0:
                 match col['nodeType']:
-                    case 'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode' | 'worldTerrainProxyMeshNode':
+                    case 'worldStaticMeshNode' | 'worldStaticDecalNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode' | 'worldTerrainProxyMeshNode':
                         obj=col.objects[0]
                         createNodeData(t, col, col['nodeIndex'], obj,ID)
                         ID+=1
-                        
+                    case 'worldEntityNode':
+                        new_ni=len(nodes)
+                        nodes.append(copy.deepcopy(nodes[col['nodeIndex']]))
+                        obj=col.objects[0]
+                        createNodeData(t, col, new_ni, obj,ID)
+                        ID+=1
+                                      
                     case 'worldInstancedMeshNode':
                         obj=col.objects[0]
                         nodeIndex=col['nodeIndex']
