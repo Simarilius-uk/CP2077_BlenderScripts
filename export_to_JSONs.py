@@ -262,7 +262,7 @@ for filepath in jsons:
                         if Sector_additions_coll:
                             Sector_additions_coll['Inst_bufferID']=bufferID
                         obj_col=find_col(i,idx,Sector_coll)    
-                        if obj_col:
+                        if obj_col and inst_trans:
                             if len(obj_col.objects)>0:
                                 obj=obj_col.objects[0]
                                 set_pos(inst_trans,obj)
@@ -270,7 +270,7 @@ for filepath in jsons:
                                 set_scale(inst_trans,obj)
                             else:
                                 obj=neg_cube
-                                set_pos(inst,obj)
+                                set_pos(inst_trans,obj)
             case 'worldStaticDecalNode':
                 #print('worldStaticDecalNode')
                 instances = [x for x in t if x['NodeIndex'] == i]
