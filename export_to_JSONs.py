@@ -282,7 +282,7 @@ for filepath in jsons:
                         set_scale(inst,obj)
                     else:
                         obj=neg_cube
-                        set_pos(inst_trans,obj)
+                        set_pos(inst,obj)
             case 'worldStaticMeshNode' | 'worldBuildingProxyMeshNode' | 'worldGenericProxyMeshNode'| 'worldTerrainProxyMeshNode': 
                 if isinstance(e, dict) and 'mesh' in data.keys():
                     meshname = data['mesh']['DepotPath']
