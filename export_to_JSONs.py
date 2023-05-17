@@ -198,7 +198,9 @@ def find_col(NodeIndex,Inst_idx,Sector_coll):
         return col[0]
     else: 
         inst=[x for x in col if x['instance_idx']==Inst_idx]
-        return inst[0]
+        if len(inst)>0:
+            return inst[0]
+    return None
 
 def find_wIDMN_col(NodeIndex,tl_inst_idx, sub_inst_idx,Sector_coll):
     #print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
@@ -209,7 +211,9 @@ def find_wIDMN_col(NodeIndex,tl_inst_idx, sub_inst_idx,Sector_coll):
         return col[0]
     else: 
         inst=[x for x in col if x['tl_instance_idx']==tl_inst_idx and x['sub_instance_idx']==sub_inst_idx]
-        return inst[0]
+        if len(inst)>0:
+            return inst[0]
+    return None
 
 def find_decal(NodeIndex,Inst_idx,Sector_coll):
     #print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
@@ -220,7 +224,9 @@ def find_decal(NodeIndex,Inst_idx,Sector_coll):
         return col[0]
     else: 
         inst=[x for x in col if x['instance_idx']==Inst_idx]
-        return inst[0]
+        if len(inst)>0:
+            return inst[0]
+    return None
 
 def createNodeData(t, col, nodeIndex, obj, ID):
     print(ID)
@@ -307,8 +313,6 @@ for filepath in jsons:
                         if Sector_additions_coll:
                             Sector_additions_coll['Inst_bufferID']=bufferID
                         obj_col=find_col(i,idx,Sector_coll)    
-                        if 'chopstick' in meshname:
-                            print(obj_col,len(obj_col.objects))
                         if obj_col and inst_trans:
                             if len(obj_col.objects)>0:
                                 obj=obj_col.objects[0]
@@ -359,10 +363,28 @@ for filepath in jsons:
                             #print(obj_col)
                             if obj_col:
                                 if len(obj_col.objects)>0:
+                                    mat=Matrix(obj_col['matrix'])
+                                    mat_inv=mat.inverted()
                                     obj=obj_col.objects[0]
-                                    set_pos(inst,obj)
-                                    set_rot(inst,obj)
-                                    set_scale(inst,obj)
+                                    inst_trans_m = obj.matrix_world @ mat_inv
+                                    obj_trans = obj.location
+                                    pos=inst_trans_m.translation
+                                    #pos=obj_trans-basic_pos
+                                    inst['Position']['X'] = float("{:.9g}".format(pos[0]*100))
+                                    inst['Position']['Y'] = float("{:.9g}".format(pos[1]*100))
+                                    inst['Position']['Z'] = float("{:.9g}".format(pos[2]*100))
+                                    quat=inst_trans_m.to_quaternion()
+                                    inst['Orientation']['r'] = float("{:.9g}".format(quat[0] ))
+                                    inst['Orientation']['i'] = float("{:.9g}".format(quat[1] ))
+                                    inst['Orientation']['j'] = float("{:.9g}".format(quat[2] ))
+                                    inst['Orientation']['k'] = float("{:.9g}".format(quat[3] ))
+                                    scale=inst_trans_m.to_scale()
+                                    inst['Scale']['X']=float("{:.9g}".format(scale.x*100))
+                                    inst['Scale']['Y']=float("{:.9g}".format(scale.y*100))
+                                    inst['Scale']['Z']=float("{:.9g}".format(scale.z*100))
+                                    #set_pos(inst,obj)
+                                    #set_rot(inst,obj)
+                                    #set_scale(inst,obj)
                                 else:
                                     obj=neg_cube
                                     set_z_pos(inst,obj)                                    
