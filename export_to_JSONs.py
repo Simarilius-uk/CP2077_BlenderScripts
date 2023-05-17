@@ -27,7 +27,7 @@ from mathutils import Vector, Matrix, Quaternion
 C = bpy.context
 
 #Set this to your project directory
-project = 'F:\\CPmod\\mana'
+project = 'F:\\CPmod\\corpo_apt'
 path = os.path.join(project,'source\\raw\\base')
 
 #its currently set to output the modified jsons to an output folder in the project dir (create one before running)
@@ -445,19 +445,22 @@ for filepath in jsons:
                                     inst_trans_m = obj.matrix_world @ basic_matr_inv
                                     obj_trans = obj.location
                                     pos=inst_trans_m.translation
-                                    #pos=obj_trans-basic_pos
-                                    inst['Position']['X'] = float("{:.9g}".format(pos[0]*100))
-                                    inst['Position']['Y'] = float("{:.9g}".format(pos[1]*100))
-                                    inst['Position']['Z'] = float("{:.9g}".format(pos[2]*100))
-                                    quat=inst_trans_m.to_quaternion()
-                                    inst['Orientation']['r'] = float("{:.9g}".format(quat[0] ))
-                                    inst['Orientation']['i'] = float("{:.9g}".format(quat[1] ))
-                                    inst['Orientation']['j'] = float("{:.9g}".format(quat[2] ))
-                                    inst['Orientation']['k'] = float("{:.9g}".format(quat[3] ))
-                                    scale=inst_trans_m.to_scale()
-                                    inst['Scale']['X']=float("{:.9g}".format(scale.x*100))
-                                    inst['Scale']['Y']=float("{:.9g}".format(scale.y*100))
-                                    inst['Scale']['Z']=float("{:.9g}".format(scale.z*100))
+                                    print(obj_trans, inst_pos)
+                                    deltapos=sum(obj_trans-inst_pos)
+                                    if abs(deltapos)>0.05:
+                                        print('deltapos ',abs(deltapos))
+                                        inst['Position']['X'] = float("{:.9g}".format(pos[0]*100))
+                                        inst['Position']['Y'] = float("{:.9g}".format(pos[1]*100))
+                                        inst['Position']['Z'] = float("{:.9g}".format(pos[2]*100))
+                                        quat=inst_trans_m.to_quaternion()
+                                        inst['Orientation']['i'] = float("{:.12g}".format(quat[0] ))
+                                        inst['Orientation']['j'] = float("{:.12g}".format(quat[1] ))
+                                        inst['Orientation']['k'] = float("{:.12g}".format(quat[2] ))
+                                        inst['Orientation']['r'] = float("{:.12g}".format(quat[3] ))
+                                        scale=inst_trans_m.to_scale()
+                                        inst['Scale']['X']=float("{:.9g}".format(scale.x*100))
+                                        inst['Scale']['Y']=float("{:.9g}".format(scale.y*100))
+                                        inst['Scale']['Z']=float("{:.9g}".format(scale.z*100))
                                 else:
                                     inst['Position']['Z']=-300
     print(wIMNs)
