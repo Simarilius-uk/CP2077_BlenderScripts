@@ -34,6 +34,9 @@ path = os.path.join(project,'source\\raw\\base')
 #you can change this to a path if you prefer
 outpath = os.path.join(project,'output')
 
+if not os.path.exists(outpath):
+    os.makedirs(outpath)
+
 def checkexists(meshname, Masters):
     groupname = os.path.splitext(os.path.split(meshname)[-1])[0]
     if groupname in Masters.children.keys() and len(Masters.children[groupname].objects)>0:
