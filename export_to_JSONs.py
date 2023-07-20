@@ -8,7 +8,7 @@
 # \__,  |  |__) |___ |  \ |    \__/ | \| |  \       .__/ |___ \__,  |  \__/ |  \    |___ |__/ |  |  | | \| \__/ 
 #                                                                                                              
 # Havent written a tutorial for this yet so thought I should add some instructions
-# 1) Import the sector you want to edit using the Import_and_instance_comb.py script from the github linked above.
+# 1) Import the sector you want to edit using the Cyberpunk Blender Addon.
 # 2) You can move the existing objects around and this will be exported
 # 3) If you delete the mesh from a collector but leave the collector, the script will set the scale for that instance to -1 which stops it rendering in game
 # 4) to add new stuff create a new collector with the sector name with _new on the end ie interior_1_1_0_1.streamingsector_new and then copy any objects you want into it.
