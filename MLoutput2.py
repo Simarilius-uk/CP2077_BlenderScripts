@@ -9,6 +9,15 @@ import os
 import numpy as np
 import copy
 
+
+##################################################################################################################
+# When saving a local copy of a mltemplate the prefix below will be used, use '' to get original names.
+prefix = 'mod_'
+
+# When saving the mlSetup if out_prefix is defined it will be used, set to '' to save over original
+
+out_prefix = ''
+
 ##################################################################################################################
 
 def make_rel(filepath):
@@ -65,6 +74,7 @@ def createOverrideTable(matTemplateObj):
         Output["MetalLevelsOut"][tmpName] = [(tmpStrength0,tmpStrength0,tmpStrength0,1),(tmpStrength1,tmpStrength1,tmpStrength1,1)]
     return Output   
     
+##################################################################################################################
 
 obj=bpy.context.active_object
 mat=obj.material_slots[0].material
@@ -77,24 +87,14 @@ if mat.get('MLSetup'):
     file = openJSON( MLSetup+".json",mode='r',DepotPath=DepotPath, ProjPath=ProjPath)
     mlsetup = json.loads(file.read())
     file.close()
-    #if os.path.exists(os.path.join(ProjPath,MLSetup)+".json"):
-    #    file = open( os.path.join(ProjPath,MLSetup)+".json",mode='r')
-    #    mlsetup = json.loads(file.read())
-    #    file.close()
-    #else:
-    #    file = open( os.path.join(DepotPath,MLSetup)+".json",mode='r')
-    #    mlsetup = json.loads(file.read())
-    #    file.close()
     
     xllay = mlsetup["Data"]["RootChunk"]["layers"]
-    
-        
+     
     LayerCount = len(xllay)
         
     print('Obj -'+ obj.name)
     print('Mat -'+ mat.name)
-    #for node in nodes:
-     #   print(node.name)
+   
     layer=0
     layer_txt=''
     numLayers= len([x for x in nodes if 'Image Texture' in x.name])
@@ -159,7 +159,6 @@ if mat.get('MLSetup'):
         
         # Need to see if this is in the overrides in the mltemplate, if not, add it and reference the new one. and save a local copy of the mltemplate if its not already local
         cs=ColorScale.default_value[::]
-        #its not on tileNG, thats teh node tree
         material=LayerGroup['mlTemplate']
         print('mlTemplate = ',material)
         mltfile = openJSON( material + ".json",mode='r',DepotPath=DepotPath, ProjPath=ProjPath)
@@ -191,8 +190,14 @@ if mat.get('MLSetup'):
             print('ColScale - ',name)
             print(cs[::])
 
+            if material[:len(prefix)]==prefix:
+                outpath= os.path.join(ProjPath,material)+".json"    
+            else:
+                b,m,a=material.partition(os.path.basename(material))
+                newmaterial=b+prefix+m
+                outpath= os.path.join(ProjPath,newmaterial)+".json"    
+                json_layer['material']['DepotPath']['$value']=newmaterial  
 
-            outpath= os.path.join(ProjPath,material)+".json"      
             if not os.path.exists(os.path.dirname(outpath)):
                 os.makedirs(os.path.dirname(outpath))
                     
@@ -205,9 +210,17 @@ if mat.get('MLSetup'):
         print('tile_normal: '+str(tile_normal))
             
         layer+=1
-outpath= os.path.join(ProjPath,MLSetup)+".json"      
+
+if MLSetup[:len(out_prefix)]==out_prefix:
+    outpath= os.path.join(ProjPath,MLSetup)+".json"    
+else:
+    b,m,a=MLSetup.partition(os.path.basename(MLSetup))
+    newmlsetup=b+out_prefix+m
+    outpath= os.path.join(ProjPath,newmlsetup)+".json"    
+
 if not os.path.exists(os.path.dirname(outpath)):
     os.makedirs(os.path.dirname(outpath))
         
 with open(outpath, 'w') as outfile:
-        json.dump(mlsetup, outfile,indent=2)    
+        json.dump(mlsetup, outfile,indent=2)  
+        print('Saved to ',outpath)  
