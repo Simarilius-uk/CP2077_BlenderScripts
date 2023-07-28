@@ -1,0 +1,213 @@
+##################################################################################################################
+# Initial attempt at getting MLSetup info back out of blender.
+# Simarilius, July 2023
+##################################################################################################################
+
+import bpy
+import json
+import os
+import numpy as np
+import copy
+
+##################################################################################################################
+
+def make_rel(filepath):
+    before,mid,after=filepath.partition('base\\')
+    return mid+after
+
+
+
+##################################################################################################################
+# These are from common.py in the plugin, can be replaced by an include if its put in the plugin 
+
+def openJSON(path, mode='r',  ProjPath='', DepotPath=''):
+    inproj=os.path.join(ProjPath,path)
+    if os.path.exists(inproj):
+        file = open(inproj,mode)
+    else:
+        file = open(os.path.join(DepotPath,path),mode)
+    return file
+
+def createOverrideTable(matTemplateObj):
+    OverList = matTemplateObj["overrides"]
+    if OverList is None:
+        OverList = matTemplateObj.get("Overrides")
+    Output = {}
+    Output["ColorScale"] = {}
+    Output["NormalStrength"] = {}
+    Output["RoughLevelsOut"] = {}
+    Output["MetalLevelsOut"] = {}
+    for x in OverList["colorScale"]:
+        tmpName = x["n"]["$value"]
+        tmpR = float(x["v"]["Elements"][0])
+        tmpG = float(x["v"]["Elements"][1])
+        tmpB = float(x["v"]["Elements"][2])
+        Output["ColorScale"][tmpName] = (tmpR,tmpG,tmpB,1)
+    for x in OverList["normalStrength"]:
+        tmpName = x["n"]["$value"]
+        tmpStrength = 0
+        if x.get("v") is not None:
+            tmpStrength = float(x["v"])
+        Output["NormalStrength"][tmpName] = tmpStrength
+    for x in OverList["roughLevelsOut"]:
+        tmpName = x["n"]["$value"]
+        tmpStrength0 = float(x["v"]["Elements"][0])
+        tmpStrength1 = float(x["v"]["Elements"][1])
+        Output["RoughLevelsOut"][tmpName] = [(tmpStrength0,tmpStrength0,tmpStrength0,1),(tmpStrength1,tmpStrength1,tmpStrength1,1)]
+    for x in OverList["metalLevelsOut"]:
+        tmpName = x["n"]["$value"]
+        if x.get("v") is not None:
+            tmpStrength0 = float(x["v"]["Elements"][0])
+            tmpStrength1 = float(x["v"]["Elements"][1])
+        else:
+            tmpStrength0 = 0
+            tmpStrength1 = 1
+        Output["MetalLevelsOut"][tmpName] = [(tmpStrength0,tmpStrength0,tmpStrength0,1),(tmpStrength1,tmpStrength1,tmpStrength1,1)]
+    return Output   
+    
+
+obj=bpy.context.active_object
+mat=obj.material_slots[0].material
+nodes=mat.node_tree.nodes
+
+if mat.get('MLSetup'):
+    MLSetup = mat.get('MLSetup')
+    ProjPath=mat.get('ProjPath')
+    DepotPath=mat.get('DepotPath')
+    file = openJSON( MLSetup+".json",mode='r',DepotPath=DepotPath, ProjPath=ProjPath)
+    mlsetup = json.loads(file.read())
+    file.close()
+    #if os.path.exists(os.path.join(ProjPath,MLSetup)+".json"):
+    #    file = open( os.path.join(ProjPath,MLSetup)+".json",mode='r')
+    #    mlsetup = json.loads(file.read())
+    #    file.close()
+    #else:
+    #    file = open( os.path.join(DepotPath,MLSetup)+".json",mode='r')
+    #    mlsetup = json.loads(file.read())
+    #    file.close()
+    
+    xllay = mlsetup["Data"]["RootChunk"]["layers"]
+    
+        
+    LayerCount = len(xllay)
+        
+    print('Obj -'+ obj.name)
+    print('Mat -'+ mat.name)
+    #for node in nodes:
+     #   print(node.name)
+    layer=0
+    layer_txt=''
+    numLayers= len([x for x in nodes if 'Image Texture' in x.name])
+
+    while layer<numLayers:
+        layernodename=''
+        if layer>1:
+            layer_txt='.'+str(layer-1).zfill(3)
+        if layer>0:
+            layernodename='Image Texture'+layer_txt
+        #
+        print('#')
+        print('# Layer '+str(layer))
+        print('#')
+        
+        json_layer=xllay[layer]
+                
+        # Layer Mask
+        if layernodename:
+            LayerMask=nodes[layernodename].image.filepath
+            print(LayerMask)
+        LayerGroup=nodes['Mat_Mod_Layer_'+str(layer)]
+
+        # Layer Values
+        ColorScale = LayerGroup.inputs['ColorScale']
+        MatTile = LayerGroup.inputs['MatTile'].default_value
+        json_layer['matTile']=MatTile
+        MbTile = LayerGroup.inputs['MbTile'].default_value
+        json_layer['mbTile']=MbTile
+        MicroblendNormalStrength = LayerGroup.inputs['MicroblendNormalStrength'].default_value
+        json_layer['microblendNormalStrength']=MicroblendNormalStrength
+        MicroblendContrast = LayerGroup.inputs['MicroblendContrast'].default_value
+        json_layer['microblendContrast']=MicroblendContrast
+        NormalStrength = LayerGroup.inputs['NormalStrength'].default_value
+# needs to be converted to bytes
+#        json_layer['normalStrength']['$value'=NormalStrength
+        Opacity = LayerGroup.inputs['Opacity'].default_value
+        json_layer['opacity']=Opacity
+        
+        #print(ColorScale)
+        print('MatTile: '+str(MatTile))
+        print('MbTile: '+str(MbTile))
+        print('MicroblendNormalStrength: '+str(MicroblendNormalStrength))
+        print('MicroblendContrast: '+str(MicroblendContrast))
+        print('NormalStrength: '+str(NormalStrength))
+        print('Opacity: '+str(Opacity))
+        
+        # Microblend
+        NG=LayerGroup.node_tree.nodes
+        Microblend = bpy.path.abspath(NG['Image Texture'].image.filepath)[:-3]+'xbm'
+        print('Microblend: '+Microblend)
+        # Need to take the filesystem out of this
+        rel_mb=make_rel(Microblend)
+        json_layer['microblend']['DepotPath']['$value']=rel_mb
+        
+        # Tile bitmaps
+        tileNG=NG['Group'].node_tree.nodes
+        tile_diff = bpy.path.abspath(tileNG['Image Texture'].image.filepath)[:-3]+'xbm'
+        tile_metal = bpy.path.abspath(tileNG['Image Texture.001'].image.filepath)[:-3]+'xbm'
+        tile_rough = bpy.path.abspath(tileNG['Image Texture.002'].image.filepath)[:-3]+'xbm'
+        tile_normal = bpy.path.abspath(tileNG['Image Texture.003'].image.filepath)[:-3]+'xbm'
+        
+        # Need to see if this is in the overrides in the mltemplate, if not, add it and reference the new one. and save a local copy of the mltemplate if its not already local
+        cs=ColorScale.default_value[::]
+        #its not on tileNG, thats teh node tree
+        material=LayerGroup['mlTemplate']
+        print('mlTemplate = ',material)
+        mltfile = openJSON( material + ".json",mode='r',DepotPath=DepotPath, ProjPath=ProjPath)
+        mltemp = json.loads(mltfile.read())
+        mltfile.close()
+        mltemplate =mltemp["Data"]["RootChunk"]
+        OverrideTable = createOverrideTable(mltemplate)
+        match=None
+        for og in OverrideTable['ColorScale']:            
+            err=np.sum(np.subtract(OverrideTable['ColorScale'][og],cs))
+            #print(err)
+            if abs(err)<0.000001:
+                match = og
+        if match:
+            json_layer['colorScale']['$value']= match
+            print('ColScale = ',match)
+        else:
+            #this is linking it so when you edit 0 later both get edited.
+            mltemplate['overrides']['colorScale'].insert(0,copy.deepcopy(mltemplate['overrides']['colorScale'][0]))
+            index=0
+            name='000000_'+str(index).zfill(6)
+            while name in OverrideTable['ColorScale']:
+                index+=1
+                name='000000_'+str(index).zfill(6)
+            mltemplate['overrides']['colorScale'][0]['n']['$value']=name
+            mltemplate['overrides']['colorScale'][0]['v']['Elements'][0]=cs[0]
+            mltemplate['overrides']['colorScale'][0]['v']['Elements'][1]=cs[1]
+            mltemplate['overrides']['colorScale'][0]['v']['Elements'][2]=cs[2]
+            print('ColScale - ',name)
+            print(cs[::])
+
+
+            outpath= os.path.join(ProjPath,material)+".json"      
+            if not os.path.exists(os.path.dirname(outpath)):
+                os.makedirs(os.path.dirname(outpath))
+                    
+            with open(outpath, 'w') as outfile:
+                json.dump(mltemp, outfile,indent=2)    
+
+        print('tile_diff: '+str(tile_diff))
+        print('tile_metal: '+str(tile_metal))
+        print('tile_rough: '+str(tile_rough))
+        print('tile_normal: '+str(tile_normal))
+            
+        layer+=1
+outpath= os.path.join(ProjPath,MLSetup)+".json"      
+if not os.path.exists(os.path.dirname(outpath)):
+    os.makedirs(os.path.dirname(outpath))
+        
+with open(outpath, 'w') as outfile:
+        json.dump(mlsetup, outfile,indent=2)    
