@@ -1,14 +1,16 @@
 # Script to export CP2077 streaming sectors from Blender 
 # Just does changes to existing bits so far
 # By Simarilius Jan 2023
+# last updated 8-8-23
 # latest version available at https://github.com/Simarilius-uk/CP2077_BlenderScripts
+# use with the plugin from https://github.com/WolvenKit/Cyberpunk-Blender-add-on use 1.4RC or newer for wkit newer than Jul 4th 23
 #
 #  __       __   ___  __   __  .  . .  . .   .       __   ___  __  ___  __   __      ___  __  . ___ . .  .  __  
 # /  ` \ / |__) |__  |__) |__) |  | |\ | |__/       /__` |__  /  `  |  /  \ |__)    |__  |  \ |  |  | |\ | / _` 
 # \__,  |  |__) |___ |  \ |    \__/ | \| |  \       .__/ |___ \__,  |  \__/ |  \    |___ |__/ |  |  | | \| \__/ 
 #                                                                                                              
 # Havent written a tutorial for this yet so thought I should add some instructions
-# 1) Import the sector you want to edit using the Import_and_instance_comb.py script from the github linked above.
+# 1) Import the sector you want to edit using the Cyberpunk blender plugin (link above).
 # 2) You can move the existing objects around and this will be exported
 # 3) If you delete the mesh from a collector but leave the collector, the script will set the scale for that instance to -1 which stops it rendering in game
 # 4) to add new stuff create a new collector with the sector name with _new on the end ie interior_1_1_0_1.streamingsector_new and then copy any objects you want into it.
@@ -17,6 +19,7 @@
 #    Its assuming it can find the json for the sector its copying from in the project, dont be clever merging blends or whatever.
 # 6) not all nodetypes are supported yet, have a look at the case statements to see which are
 # 
+# Ask in world-editing on the discord (https://discord.gg/redmodding) if you have any q/trouble
 
 import json
 import glob
@@ -26,16 +29,23 @@ import copy
 from mathutils import Vector, Matrix, Quaternion
 C = bpy.context
 
-#Set this to your project directory
-project = 'F:\\CPmod\\mana'
-path = os.path.join(project,'source\\raw\\base')
 
+#Set this to your project directory
+project = 'F:\\CPmod\\deleteme6'
+if not os.path.exists(project):
+    print('project path doesnt exist')
+path = os.path.join(project,'source\\raw\\base')
+print('exporting sectors from ',path)
 #its currently set to output the modified jsons to an output folder in the project dir (create one before running)
 #you can change this to a path if you prefer
 outpath = os.path.join(project,'output')
 
+if not os.path.exists(outpath):
+    os.makedirs(outpath)
+    print('created output directory')
+    
 def checkexists(meshname, Masters):
-    groupname = os.path.splitext(os.path.split(meshname)[-1])[0]
+    groupname = os.path.splitext(os.path.split(meshname['$value'])[-1])[0]
     if groupname in Masters.children.keys() and len(Masters.children[groupname].objects)>0:
         return True
     else:
@@ -198,7 +208,9 @@ def find_col(NodeIndex,Inst_idx,Sector_coll):
         return col[0]
     else: 
         inst=[x for x in col if x['instance_idx']==Inst_idx]
-        return inst[0]
+        if len(inst)>0:
+            return inst[0]
+    return None
 
 def find_wIDMN_col(NodeIndex,tl_inst_idx, sub_inst_idx,Sector_coll):
     #print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
@@ -209,7 +221,9 @@ def find_wIDMN_col(NodeIndex,tl_inst_idx, sub_inst_idx,Sector_coll):
         return col[0]
     else: 
         inst=[x for x in col if x['tl_instance_idx']==tl_inst_idx and x['sub_instance_idx']==sub_inst_idx]
-        return inst[0]
+        if len(inst)>0:
+            return inst[0]
+    return None
 
 def find_decal(NodeIndex,Inst_idx,Sector_coll):
     #print('Looking for NodeIndex ',NodeIndex,' Inst_idx ',Inst_idx, ' in ',Sector_coll)
@@ -220,7 +234,9 @@ def find_decal(NodeIndex,Inst_idx,Sector_coll):
         return col[0]
     else: 
         inst=[x for x in col if x['instance_idx']==Inst_idx]
-        return inst[0]
+        if len(inst)>0:
+            return inst[0]
+    return None
 
 def createNodeData(t, col, nodeIndex, obj, ID):
     print(ID)
@@ -240,6 +256,9 @@ def createNodeData(t, col, nodeIndex, obj, ID):
 
 
 jsons = glob.glob(path+"\**\*.streamingsector.json", recursive = True)
+
+if len(jsons)<1:
+    print('ERROR - No source streaming sector jsons found')
 
 Masters=bpy.data.collections.get("MasterInstances")
 
@@ -307,8 +326,6 @@ for filepath in jsons:
                         if Sector_additions_coll:
                             Sector_additions_coll['Inst_bufferID']=bufferID
                         obj_col=find_col(i,idx,Sector_coll)    
-                        if 'chopstick' in meshname:
-                            print(obj_col,len(obj_col.objects))
                         if obj_col and inst_trans:
                             if len(obj_col.objects)>0:
                                 obj=obj_col.objects[0]
@@ -441,19 +458,22 @@ for filepath in jsons:
                                     inst_trans_m = obj.matrix_world @ basic_matr_inv
                                     obj_trans = obj.location
                                     pos=inst_trans_m.translation
-                                    #pos=obj_trans-basic_pos
-                                    inst['Position']['X'] = float("{:.9g}".format(pos[0]*100))
-                                    inst['Position']['Y'] = float("{:.9g}".format(pos[1]*100))
-                                    inst['Position']['Z'] = float("{:.9g}".format(pos[2]*100))
-                                    quat=inst_trans_m.to_quaternion()
-                                    inst['Orientation']['r'] = float("{:.9g}".format(quat[0] ))
-                                    inst['Orientation']['i'] = float("{:.9g}".format(quat[1] ))
-                                    inst['Orientation']['j'] = float("{:.9g}".format(quat[2] ))
-                                    inst['Orientation']['k'] = float("{:.9g}".format(quat[3] ))
-                                    scale=inst_trans_m.to_scale()
-                                    inst['Scale']['X']=float("{:.9g}".format(scale.x*100))
-                                    inst['Scale']['Y']=float("{:.9g}".format(scale.y*100))
-                                    inst['Scale']['Z']=float("{:.9g}".format(scale.z*100))
+                                    print(obj_trans, inst_pos)
+                                    deltapos=sum(obj_trans-inst_pos)
+                                    if abs(deltapos)>0.05:
+                                        print('deltapos ',abs(deltapos))
+                                        inst['Position']['X'] = float("{:.9g}".format(pos[0]*100))
+                                        inst['Position']['Y'] = float("{:.9g}".format(pos[1]*100))
+                                        inst['Position']['Z'] = float("{:.9g}".format(pos[2]*100))
+                                        quat=inst_trans_m.to_quaternion()
+                                        inst['Orientation']['i'] = float("{:.12g}".format(quat[0] ))
+                                        inst['Orientation']['j'] = float("{:.12g}".format(quat[1] ))
+                                        inst['Orientation']['k'] = float("{:.12g}".format(quat[2] ))
+                                        inst['Orientation']['r'] = float("{:.12g}".format(quat[3] ))
+                                        scale=inst_trans_m.to_scale()
+                                        inst['Scale']['X']=float("{:.9g}".format(scale.x*100))
+                                        inst['Scale']['Y']=float("{:.9g}".format(scale.y*100))
+                                        inst['Scale']['Z']=float("{:.9g}".format(scale.z*100))
                                 else:
                                     inst['Position']['Z']=-300
     print(wIMNs)
@@ -466,8 +486,8 @@ for filepath in jsons:
     destructibles_to_copy=[]
     ID=666
     for node in t:
-        if node['Id']>ID:
-            ID=node['Id']+1
+        if int(node['Id'])>ID:
+            ID=int(node['Id'])+1
     if Sector_additions_coll:
         for col in Sector_additions_coll.children:
             if 'nodeIndex' in col.keys() and col['sectorName']==sectorName and len(col.objects)>0:
