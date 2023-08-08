@@ -24,7 +24,9 @@ def make_rel(filepath):
     before,mid,after=filepath.partition('base\\')
     return mid+after
 
-
+def prefix_mat(material):
+    b,m,a=material.partition(os.path.basename(material))
+    return b+prefix+m
 
 ##################################################################################################################
 # These are from common.py in the plugin, can be replaced by an include if its put in the plugin 
@@ -79,7 +81,7 @@ def createOverrideTable(matTemplateObj):
 obj=bpy.context.active_object
 mat=obj.material_slots[0].material
 nodes=mat.node_tree.nodes
-
+prefixxed=[]
 if mat.get('MLSetup'):
     MLSetup = mat.get('MLSetup')
     ProjPath=mat.get('ProjPath')
@@ -161,6 +163,9 @@ if mat.get('MLSetup'):
         cs=ColorScale.default_value[::]
         material=LayerGroup['mlTemplate']
         print('mlTemplate = ',material)
+        if material in prefixxed:
+            material=prefix_mat(material)
+            print('Material already modified, loading ',material)
         mltfile = openJSON( material + ".json",mode='r',DepotPath=DepotPath, ProjPath=ProjPath)
         mltemp = json.loads(mltfile.read())
         mltfile.close()
@@ -187,22 +192,24 @@ if mat.get('MLSetup'):
             mltemplate['overrides']['colorScale'][0]['v']['Elements'][0]=cs[0]
             mltemplate['overrides']['colorScale'][0]['v']['Elements'][1]=cs[1]
             mltemplate['overrides']['colorScale'][0]['v']['Elements'][2]=cs[2]
-            print('ColScale - ',name)
+            print('ColScale - ',name)            
+            json_layer['colorScale']['$value']= name
             print(cs[::])
 
-            if material[:len(prefix)]==prefix:
+            if  os.path.basename(material)[:len(prefix)]==prefix:
                 outpath= os.path.join(ProjPath,material)+".json"    
             else:
-                b,m,a=material.partition(os.path.basename(material))
-                newmaterial=b+prefix+m
+                newmaterial=prefix_mat(material)
                 outpath= os.path.join(ProjPath,newmaterial)+".json"    
                 json_layer['material']['DepotPath']['$value']=newmaterial  
+                prefixxed.append(material)
 
             if not os.path.exists(os.path.dirname(outpath)):
                 os.makedirs(os.path.dirname(outpath))
                     
             with open(outpath, 'w') as outfile:
                 json.dump(mltemp, outfile,indent=2)    
+            
 
         print('tile_diff: '+str(tile_diff))
         print('tile_metal: '+str(tile_metal))
@@ -211,7 +218,7 @@ if mat.get('MLSetup'):
             
         layer+=1
 
-if MLSetup[:len(out_prefix)]==out_prefix:
+if os.path.basename(MLSetup)[:len(out_prefix)]==out_prefix:
     outpath= os.path.join(ProjPath,MLSetup)+".json"    
 else:
     b,m,a=MLSetup.partition(os.path.basename(MLSetup))
