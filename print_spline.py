@@ -1,5 +1,5 @@
 import bpy
-
+C=bpy.context
 obj=C.selected_objects[0]
 if obj.type=='CURVE':
     spline=obj.data.splines[0]
