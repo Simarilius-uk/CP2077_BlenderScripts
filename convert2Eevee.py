@@ -6,7 +6,7 @@ def np_array_from_image(img_name):
     img = bpy.data.images[img_name]
     return np.array(img.pixels[:])
 
-
+# Change this to the name of the material you want to convert
 matname='ml_l1_001_wa_pants__judy_masksset'
 
 
